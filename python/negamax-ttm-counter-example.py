@@ -154,7 +154,7 @@ def negamax_ttm(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
     return value
 
 
-def draw_tree(u: Node, filename: str, visited=None, special=None, with_labels=False) -> None:
+def draw_tree_graphviz(u: Node, filename: str, visited=None, special=None, with_labels=False) -> None:
     def collect_nodes(u: Node) -> List[Node]:
         result = [u]
         for v in u.children:
@@ -219,6 +219,98 @@ def draw_tree(u: Node, filename: str, visited=None, special=None, with_labels=Fa
     dot.render(filename, format='pdf', cleanup=True)
 
 
+def draw_tree_tikz(u: Node, filename: str, visited=None, with_labels=False) -> None:
+    """
+    Generate a TikZ picture for a game tree.
+    Nodes are placed roughly using depth and sibling order.
+    visited: nodes that have been visited (others are dashed)
+    with_labels: if True, display node IDs top-left in math font
+    """
+
+    def collect_nodes(node: Node) -> list[Node]:
+        result = [node]
+        for child in node.children:
+            result.extend(collect_nodes(child))
+        return list(dict.fromkeys(result))
+
+    def assign_positions(node: Node, depth=0, x=0, positions=None, x_offset=0):
+        if positions is None:
+            positions = {}
+
+        y = -depth * 2
+        positions[node.id] = (x, y)
+
+        num_children = len(node.children)
+        if num_children > 0:
+            # Calculate spacing between children
+            spacing = 2.0
+            total_width = (num_children - 1) * spacing
+            start_x = x - total_width / 2
+
+            for i, child in enumerate(node.children):
+                child_x = start_x + i * spacing
+                assign_positions(child, depth + 1, child_x, positions, x_offset)
+
+        return positions
+
+    V = collect_nodes(u)
+    visited = [v.id for v in V] if visited is None else list(set(visited))
+
+    # First pass to get all nodes and their depths
+    nodes_by_depth = {}
+
+    def get_depths(node, depth=0):
+        nodes_by_depth.setdefault(depth, []).append(node)
+        for child in node.children:
+            get_depths(child, depth + 1)
+
+    get_depths(u)
+
+    # Assign positions level by level to avoid conflicts
+    positions = {}
+    max_depth = max(nodes_by_depth.keys()) if nodes_by_depth else 0
+
+    for depth in sorted(nodes_by_depth.keys()):
+        nodes_at_depth = nodes_by_depth[depth]
+        spacing = 2.0
+        total_width = (len(nodes_at_depth) - 1) * spacing
+        start_x = -total_width / 2
+
+        for i, node in enumerate(nodes_at_depth):
+            x = start_x + i * spacing
+            positions[node.id] = (x, -depth * 2)
+
+    tikz_lines = []
+    tikz_lines.append(r"\begin{tikzpicture}[>=stealth]")
+
+    # Node definitions
+    for node in V:
+        x, y = positions[node.id]
+        node_color = 'whiteplayer' if node.color == Color.White else 'blackplayer'
+        node_style = f"{node_color}"
+        if node.id not in visited:
+            node_style += ",dashednode"
+        # Main node with the numeric eval
+        tikz_lines.append(f"\\node[gamenode,{node_style}] ({node.id}) at ({x:.1f},{y:.1f}) {{{node.eval}}};")
+        # Optional label node (unique name)
+        if with_labels:
+            tikz_lines.append(f"\\node[gamelabel] ({node.id}_label) at ({node.id}) {{$ {node.id} $}};")
+
+    # Edges
+    for node in V:
+        for child in node.children:
+            edge_style = "gamedashedge" if child.id not in visited else "gameedge"
+            tikz_lines.append(f"\\draw[{edge_style}] ({node.id}) -- ({child.id});")
+
+    tikz_lines.append(r"\end{tikzpicture}")
+
+    # Write to file
+    if not filename.endswith('.tikz'):
+        filename += '.tikz'
+    with open(filename, 'w') as f:
+        f.write('\n'.join(tikz_lines))
+
+
 def collect_nodes(u: Node) -> List[Node]:
     """
     Collect all unique nodes in the tree using depth-first traversal.
@@ -263,21 +355,24 @@ def run_negamax_ttm():
     T = TranspositionTable()
     Settings.visited = []
     negamax_ttm(u, alpha=0, beta=5, depth=6, T=T)
-    draw_tree(u, 'negamax_ttm_a', visited=Settings.visited, special=['v'])
-    draw_tree(u, 'negamax_ttm_a_with_labels', visited=Settings.visited, special=['v'], with_labels=True)
+    draw_tree_graphviz(u, 'negamax_ttm_a', visited=Settings.visited, special=['v'])
+    draw_tree_graphviz(u, 'negamax_ttm_a_with_labels', visited=Settings.visited, special=['v'], with_labels=True)
+    draw_tree_tikz(u, 'negamax_ttm_a', visited=Settings.visited, with_labels=True)
     print(f'T = {T}')
 
     print('--- negamax_ttm_b ---')
     T = TranspositionTable()
     Settings.visited = []
     negamax_ttm(v, alpha=0, beta=2, depth=4, T=T)
-    draw_tree(v, 'negamax_ttm_b', visited=Settings.visited, special=['v'])
+    draw_tree_graphviz(v, 'negamax_ttm_b', visited=Settings.visited, special=['v'])
+    draw_tree_graphviz(v, 'negamax_ttm_b', visited=Settings.visited)
     print(f'T = {T}')
 
     print('--- negamax_ttm_c ---')
     Settings.visited = []
     negamax_ttm(v, alpha=0, beta=5, depth=2, T=T)
-    draw_tree(v, 'negamax_ttm_c', visited=Settings.visited, special=['v'])
+    draw_tree_graphviz(v, 'negamax_ttm_c', visited=Settings.visited, special=['v'])
+    draw_tree_tikz(v, 'negamax_ttm_c', visited=Settings.visited)
     print(f'T = {T}')
 
 
