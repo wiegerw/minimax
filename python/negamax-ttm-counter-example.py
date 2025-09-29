@@ -154,13 +154,69 @@ def negamax_ttm(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
     return value
 
 
-def draw_tree_graphviz(u: Node, filename: str, visited=None, special=None, with_labels=False) -> None:
-    def collect_nodes(u: Node) -> List[Node]:
-        result = [u]
-        for v in u.children:
-            result.extend(collect_nodes(v))
-        return list(dict.fromkeys(result))  # preserve order, remove duplicates
+def collect_nodes(u: Node) -> List[Node]:
+    """
+    Collect all unique nodes in the tree using depth-first traversal.
 
+    Args:
+        u: The root node of the game tree
+
+    Returns:
+        List[Node]: A list of all unique nodes in the tree
+    """
+    result = [u]
+    for v in u.children:
+        result.extend(collect_nodes(v))
+    return list(set(result))
+
+
+# --- helper: parse plain graphviz output into positions ---
+def _parse_graphviz_plain_positions(plain_text: str) -> Dict[str, Tuple[float, float]]:
+    """
+    Parse the `plain` output of Graphviz (dot -Tplain) and return node positions.
+    Returns a dict mapping node name -> (x, y) (floats).
+    Coordinates are normalized so center is at (0,0) to produce nicer TikZ placement.
+    """
+    positions: Dict[str, Tuple[float, float]] = {}
+    minx = miny = float('inf')
+    maxx = maxy = float('-inf')
+
+    for line in plain_text.splitlines():
+        parts = line.split()
+        if not parts:
+            continue
+        if parts[0] == 'node':
+            # plain format: node <name> <x> <y> <width> <height> <label>
+            name = parts[1]
+            x = float(parts[2])
+            y = float(parts[3])
+            positions[name] = (x, y)
+            if x < minx: minx = x
+            if x > maxx: maxx = x
+            if y < miny: miny = y
+            if y > maxy: maxy = y
+
+    # If no nodes found, return empty
+    if not positions:
+        return positions
+
+    # Normalize: translate center to (0,0) for nicer TikZ coordinates.
+    cx = (minx + maxx) / 2.0
+    cy = (miny + maxy) / 2.0
+
+    normalized = {}
+    for name, (x, y) in positions.items():
+        normalized[name] = (x - cx, y - cy)
+
+    return normalized
+
+
+def draw_tree_graphviz(u: Node, filename: str, visited=None, special=None, with_labels=False, return_positions: bool = False) -> Dict[str, Tuple[float, float]] or None:
+    """
+    Render the tree with Graphviz (PDF) and optionally return a dict of node positions
+    computed by Graphviz (using the 'plain' output).
+    If return_positions is True the function returns a dict mapping node-id -> (x, y).
+    """
     V = collect_nodes(u)
     visited = [v.id for v in V] if visited is None else list(set(visited))
     special = special if special else []
@@ -216,85 +272,81 @@ def draw_tree_graphviz(u: Node, filename: str, visited=None, special=None, with_
             edge_style = 'dashed' if child.id not in visited else 'solid'
             dot.edge(str(node.id), str(child.id), style=edge_style)
 
+    # Render PDF (as before)
     dot.render(filename, format='pdf', cleanup=True)
 
+    if return_positions:
+        # Ask graphviz for plain layout to parse computed coordinates.
+        # Use the `pipe` interface with format='plain'
+        plain_bytes = dot.pipe(format='plain')
+        plain = plain_bytes.decode('utf-8')
+        positions = _parse_graphviz_plain_positions(plain)
+        return positions
 
-def draw_tree_tikz(u: Node, filename: str, visited=None, with_labels=False) -> None:
+    return None
+
+
+# --- modified draw_tree_tikz: accept positions from graphviz ---
+def draw_tree_tikz(u: Node, filename: str, visited=None, with_labels=False, positions: Dict[str, Tuple[float, float]] = None) -> None:
     """
     Generate a TikZ picture for a game tree.
-    Nodes are placed roughly using depth and sibling order.
+    If `positions` is provided (a dict mapping node-id -> (x,y)), use those coordinates.
+    Otherwise fall back to the previous rough depth/sibling layout.
     visited: nodes that have been visited (others are dashed)
     with_labels: if True, display node IDs top-left in math font
     """
-
-    def collect_nodes(node: Node) -> list[Node]:
-        result = [node]
-        for child in node.children:
-            result.extend(collect_nodes(child))
-        return list(dict.fromkeys(result))
-
-    def assign_positions(node: Node, depth=0, x=0, positions=None, x_offset=0):
-        if positions is None:
-            positions = {}
-
-        y = -depth * 2
-        positions[node.id] = (x, y)
-
-        num_children = len(node.children)
-        if num_children > 0:
-            # Calculate spacing between children
-            spacing = 2.0
-            total_width = (num_children - 1) * spacing
-            start_x = x - total_width / 2
-
-            for i, child in enumerate(node.children):
-                child_x = start_x + i * spacing
-                assign_positions(child, depth + 1, child_x, positions, x_offset)
-
-        return positions
-
     V = collect_nodes(u)
     visited = [v.id for v in V] if visited is None else list(set(visited))
 
-    # First pass to get all nodes and their depths
-    nodes_by_depth = {}
+    # If no positions supplied, compute rough positions as before
+    if positions is None:
+        # First pass to get all nodes and their depths
+        nodes_by_depth = {}
 
-    def get_depths(node, depth=0):
-        nodes_by_depth.setdefault(depth, []).append(node)
-        for child in node.children:
-            get_depths(child, depth + 1)
+        def get_depths(node, depth=0):
+            nodes_by_depth.setdefault(depth, []).append(node)
+            for child in node.children:
+                get_depths(child, depth + 1)
 
-    get_depths(u)
+        get_depths(u)
 
-    # Assign positions level by level to avoid conflicts
-    positions = {}
-    max_depth = max(nodes_by_depth.keys()) if nodes_by_depth else 0
+        # Assign positions level by level to avoid conflicts
+        positions = {}
+        max_depth = max(nodes_by_depth.keys()) if nodes_by_depth else 0
 
-    for depth in sorted(nodes_by_depth.keys()):
-        nodes_at_depth = nodes_by_depth[depth]
-        spacing = 2.0
-        total_width = (len(nodes_at_depth) - 1) * spacing
-        start_x = -total_width / 2
+        for depth in sorted(nodes_by_depth.keys()):
+            nodes_at_depth = nodes_by_depth[depth]
+            spacing = 2.0
+            total_width = (len(nodes_at_depth) - 1) * spacing
+            start_x = -total_width / 2
 
-        for i, node in enumerate(nodes_at_depth):
-            x = start_x + i * spacing
-            positions[node.id] = (x, -depth * 2)
+            for i, node in enumerate(nodes_at_depth):
+                x = start_x + i * spacing
+                positions[node.id] = (x, -depth * 2)
+    else:
+        # positions provided by Graphviz: ensure all nodes are present
+        # If a node is missing, fall back to (0,0) for that node (shouldn't normally happen)
+        for node in V:
+            if str(node.id) not in positions and node.id not in positions:
+                positions[str(node.id)] = (0.0, 0.0)
 
     tikz_lines = []
     tikz_lines.append(r"\begin{tikzpicture}[>=stealth]")
 
     # Node definitions
     for node in V:
-        x, y = positions[node.id]
+        # look up by string name; graphviz and our code use string ids
+        key = str(node.id)
+        x, y = positions.get(key, positions.get(node.id, (0.0, 0.0)))
         node_color = 'whiteplayer' if node.color == Color.White else 'blackplayer'
         node_style = f"{node_color}"
         if node.id not in visited:
             node_style += ",dashednode"
         # Main node with the numeric eval
-        tikz_lines.append(f"\\node[gamenode,{node_style}] ({node.id}) at ({x:.1f},{y:.1f}) {{{node.eval}}};")
+        tikz_lines.append(f"\\node[gamenode,{node_style}] ({key}) at ({x:.2f},{y:.2f}) {{${node.eval}$}};")
         # Optional label node (unique name)
         if with_labels:
-            tikz_lines.append(f"\\node[gamelabel] ({node.id}_label) at ({node.id}) {{$ {node.id} $}};")
+            tikz_lines.append(f"\\node[gamelabel] ({key}_label) at ({key}) {{${key}$}};")
 
     # Edges
     for node in V:
@@ -309,22 +361,6 @@ def draw_tree_tikz(u: Node, filename: str, visited=None, with_labels=False) -> N
         filename += '.tikz'
     with open(filename, 'w') as f:
         f.write('\n'.join(tikz_lines))
-
-
-def collect_nodes(u: Node) -> List[Node]:
-    """
-    Collect all unique nodes in the tree using depth-first traversal.
-
-    Args:
-        u: The root node of the game tree
-
-    Returns:
-        List[Node]: A list of all unique nodes in the tree
-    """
-    result = [u]
-    for v in u.children:
-        result.extend(collect_nodes(v))
-    return list(set(result))
 
 
 def make_tree() -> Tuple[Node, Dict[str, Node]]:
@@ -355,24 +391,32 @@ def run_negamax_ttm():
     T = TranspositionTable()
     Settings.visited = []
     negamax_ttm(u, alpha=0, beta=5, depth=6, T=T)
-    draw_tree_graphviz(u, 'negamax_ttm_a', visited=Settings.visited, special=['v'])
+
+    # Render graphviz and also get computed positions
+    gv_positions = draw_tree_graphviz(u, 'negamax_ttm_a', visited=Settings.visited, special=['v'], return_positions=True)
+    # Also produce with labels (but no need to re-get positions)
     draw_tree_graphviz(u, 'negamax_ttm_a_with_labels', visited=Settings.visited, special=['v'], with_labels=True)
-    draw_tree_tikz(u, 'negamax_ttm_a', visited=Settings.visited, with_labels=True)
+    # Use graphviz positions when making the TikZ version
+    draw_tree_tikz(u, 'negamax_ttm_a', visited=Settings.visited, with_labels=True, positions=gv_positions)
     print(f'T = {T}')
 
     print('--- negamax_ttm_b ---')
     T = TranspositionTable()
     Settings.visited = []
     negamax_ttm(v, alpha=0, beta=2, depth=4, T=T)
-    draw_tree_graphviz(v, 'negamax_ttm_b', visited=Settings.visited, special=['v'])
+    gv_positions_b = draw_tree_graphviz(v, 'negamax_ttm_b', visited=Settings.visited, special=['v'], return_positions=True)
     draw_tree_graphviz(v, 'negamax_ttm_b', visited=Settings.visited)
+    # If you want tikz here too, call:
+    # draw_tree_tikz(v, 'negamax_ttm_b', visited=Settings.visited, positions=gv_positions_b)
     print(f'T = {T}')
 
     print('--- negamax_ttm_c ---')
     Settings.visited = []
     negamax_ttm(v, alpha=0, beta=5, depth=2, T=T)
     draw_tree_graphviz(v, 'negamax_ttm_c', visited=Settings.visited, special=['v'])
-    draw_tree_tikz(v, 'negamax_ttm_c', visited=Settings.visited)
+    # use Graphviz positions if you want a TikZ of this also:
+    gv_positions_c = draw_tree_graphviz(v, 'negamax_ttm_c', visited=Settings.visited, return_positions=True)
+    draw_tree_tikz(v, 'negamax_ttm_c', visited=Settings.visited, positions=gv_positions_c)
     print(f'T = {T}')
 
 
