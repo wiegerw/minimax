@@ -216,12 +216,6 @@ def draw_tree_graphviz(u: Node, filename: str=None, visited=None, special=None, 
     Render a game tree with Graphviz. If filename is specified, a PDF is generated.
     Preserves the order of children by using subgraphs with invisible edges.
     """
-    def collect_nodes(u: Node) -> List[Node]:
-        result = [u]
-        for v in u.children:
-            result.extend(collect_nodes(v))
-        return list(dict.fromkeys(result))  # preserve order, remove duplicates
-
     V = collect_nodes(u)
     visited = [v.id for v in V] if visited is None else list(set(visited))
     special = special if special else []
@@ -390,13 +384,15 @@ def run_negamax_ttm():
     T = TranspositionTable()
     Settings.visited = []
     negamax_ttm(v, alpha=0, beta=2, depth=4, T=T)
-    draw_tree_graphviz(v, 'negamax_ttm_b', visited=Settings.visited, special=['v'])
+    graph_b = draw_tree_graphviz(v, 'negamax_ttm_b', visited=Settings.visited, special=['v'], with_labels=True)
+    draw_tree_tikz(v, 'negamax_ttm_b', visited=Settings.visited, with_labels=True, graph=graph_b)
     print(f'T = {T}')
 
     print('--- negamax_ttm_c ---')
     Settings.visited = []
     negamax_ttm(v, alpha=0, beta=5, depth=2, T=T)
-    draw_tree_graphviz(v, 'negamax_ttm_c', visited=Settings.visited, special=['v'])
+    graph_c = draw_tree_graphviz(v, 'negamax_ttm_c', visited=Settings.visited, special=['v'], with_labels=True)
+    draw_tree_tikz(v, 'negamax_ttm_c', visited=Settings.visited, with_labels=True, graph=graph_c)
     print(f'T = {T}')
 
 
