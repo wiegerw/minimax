@@ -154,10 +154,10 @@ abstract module Lemmas
     var w_ := w.children;
 
     var index1: seq<nat> :|
-      is_subtree_index(index1, u, v) && forall i | 0 <= i < |u_| :: && is_partial_subtree(u_[i], v_[index1[i]]);
+      is_subtree_index(index1, u, v) && forall i | 0 <= i < |u_| :: is_partial_subtree(u_[i], v_[index1[i]]);
 
     var index2: seq<nat> :|
-      is_subtree_index(index2, v, w) && forall i | 0 <= i < |v_| :: && is_partial_subtree(v_[i], w_[index2[i]]);
+      is_subtree_index(index2, v, w) && forall i | 0 <= i < |v_| :: is_partial_subtree(v_[i], w_[index2[i]]);
 
     SubtreeTransitivityHelperLemma(index1, index2, u, v, w);
     var index3: seq<nat> := compose_indices(index1, index2);

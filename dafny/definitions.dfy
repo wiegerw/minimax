@@ -282,7 +282,7 @@ abstract module Definitions
     // Map the children of u to the children of v
     exists index: seq<nat> ::
       is_subtree_index(index, u, v) &&
-      forall i | 0 <= i < |u.children| :: && is_partial_subtree(u.children[i], v.children[index[i]])
+      forall i | 0 <= i < |u.children| :: is_partial_subtree(u.children[i], v.children[index[i]])
   }
 
 } // module Definitions
