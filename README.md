@@ -1,6 +1,6 @@
 # Formal Verification of Minimax Algorithms
 
-This repository accompanies our submission to **ACG 2025**, presenting a formal verification study of game tree search algorithms using Dafny. We introduce a **witness-based correctness criterion** for depth-limited search with transposition tables, and verify a representative set of minimax and negamax variants against it. In addition, we provide corresponding Python implementations for experimentation and testing.
+This repository accompanies our submission to the [Dafny Workshop at POPL 2026](https://popl26.sigplan.org/home/dafny-2026). It presents a formal verification study of game-tree search algorithms in Dafny. We introduce a **witness-based correctness criterion** for depth-limited search with transposition tables, and verify a representative family of minimax and negamax variants against this criterion. The repository also includes corresponding Python implementations to support experimentation and empirical testing. See also the extended [arXiv version](https://arxiv.org/abs/2509.20138) of our paper.
 
 ## Contents
 
