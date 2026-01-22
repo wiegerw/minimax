@@ -12,7 +12,6 @@ our correctness criterion for transposition table search.
 
 from enum import Enum
 from typing import List, Tuple, Dict
-import copy
 import graphviz
 from graphviz import Digraph
 
@@ -20,6 +19,23 @@ from graphviz import Digraph
 class Settings:
     INFINITY = 1000
     visited = []
+
+
+class StatementLogger:
+    global_index = 0
+
+    def __init__(self, function_call: str):
+        self.function_call = function_call
+        self.statements = []
+
+    def log(self, statement: str):
+        StatementLogger.global_index += 1
+        n = StatementLogger.global_index
+        self.statements.append(f'{n:2}: {statement}')
+
+    def dump(self, return_value: str):
+        lines = [f'{self.function_call} = {return_value})'] + self.statements
+        print('\n  '.join(lines))
 
 
 class Color(Enum):
@@ -81,27 +97,38 @@ class TranspositionTable(dict):
 
 # Negamax Wikipedia 2025
 def negamax_ttw(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTable) -> int:
+    logger = StatementLogger(f'negamax_ttw({u.id}, alpha={alpha:2}, beta={beta:2}, depth={depth}, T={T})')
     Settings.visited.append(u.id)
     alpha0 = alpha
-    T0 = copy.deepcopy(T)
 
     if u.id in T:
         t = T[u.id]
         if t.depth >= depth:
             if t.flag == TableFlag.Exact:
+                logger.log(f'table lookup: return {t.value}')
+                logger.dump(f'{t.value} ({t.flag})')
                 return t.value
             elif t.flag == TableFlag.Lowerbound and t.value >= beta:
+                logger.log(f'table lookup: return {t.value}')
+                logger.dump(f'{t.value} ({t.flag})')
                 return t.value
             elif t.flag == TableFlag.Upperbound and t.value <= alpha:
+                logger.log(f'table lookup: return {t.value}')
+                logger.dump(f'{t.value} ({t.flag})')
                 return t.value
 
     if depth == 0 or not u.children:
+        logger.dump(f'{u.color.value * u.eval}')
         return u.color.value * u.eval
     value = -Settings.INFINITY
+    logger.log(f'negamax:      value := {value}')
     for v in u.children:
         value = max(value, -negamax_ttw(v, -beta, -alpha, depth - 1, T))
+        logger.log(f'negamax:      value := {value}')
         alpha = max(alpha, value)
+        logger.log(f'negamax:      alpha := {alpha}')
         if alpha >= beta:
+            logger.log(f'negamax:      break (alpha={alpha} >= beta={beta})')
             break
 
     if value <= alpha0:
@@ -110,37 +137,47 @@ def negamax_ttw(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
         flag = TableFlag.Lowerbound
     else:
         flag = TableFlag.Exact
+    logger.log(f'table update: T[{u.id}] := (value={value}, depth={depth}, flag={flag})')
     T[u.id] = TableEntry(value, depth, flag)
 
-    print(f'negamax_ttw({u.id}, color={u.color}, alpha={alpha0:2}, beta={beta:2}, depth={depth}, T={T0}) = {value:2} ({flag})')
+    logger.dump(f'{value} ({flag})')
     return value
 
 
 # Negamax with transposition table (Marsland 1986)
 def negamax_ttm(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTable) -> int:
+    logger = StatementLogger(f'negamax_ttm({u.id}, alpha={alpha:2}, beta={beta:2}, depth={depth}, T={T})')
     Settings.visited.append(u.id)
-    alpha0 = alpha
-    T0 = copy.deepcopy(T)
 
     if u.id in T:
         t = T[u.id]
         if t.depth >= depth:
             if t.flag == TableFlag.Exact:
+                logger.log(f'table lookup: return {t.value}')
+                logger.dump(f'{t.value} ({t.flag})')
                 return t.value
             elif t.flag == TableFlag.Lowerbound:
                 alpha = max(alpha, t.value)
+                logger.log(f'table lookup: alpha := {alpha}')
             elif t.flag == TableFlag.Upperbound:
                 beta = min(beta, t.value)
+                logger.log(f'table lookup: beta := {beta}')
             if alpha >= beta:
+                logger.log(f'table lookup: return {t.value}')
+                logger.dump(f'{t.value}')
                 return t.value
 
     if depth == 0 or not u.children:
+        logger.dump(f'{u.color.value * u.eval}')
         return u.color.value * u.eval
 
     value = -Settings.INFINITY
+    logger.log(f'negamax:      value := {value}')
     for v in u.children:
         value = max(value, -negamax_ttm(v, -beta, -max(value, alpha), depth - 1, T))
+        logger.log(f'negamax:      value := {value}')
         if value >= beta:
+            logger.log(f'negamax:      break (value={value} >= beta={beta})')
             break
 
     flag = TableFlag.Exact
@@ -149,9 +186,10 @@ def negamax_ttm(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
     if value >= beta:
         flag = TableFlag.Lowerbound
     if u.id not in T or T[u.id].depth <= depth:
+        logger.log(f'table update: T[{u.id}] := (value={value}, depth={depth}, flag={flag})')
         T[u.id] = TableEntry(value, depth, flag)
 
-    print(f'negamax_ttm({u.id}, alpha={alpha0:2}, beta={beta:2}, depth={depth}, T={T0}) = {value:2} ({flag})')
+    logger.dump(f'{value} ({flag})')
     return value
 
 
@@ -370,6 +408,7 @@ def run_negamax_ttm():
     v = node_map['v']
 
     print('--- negamax_ttm_a ---')
+    StatementLogger.global_index = 0
     T = TranspositionTable()
     Settings.visited = []
     negamax_ttm(u, alpha=0, beta=5, depth=6, T=T)
@@ -381,6 +420,7 @@ def run_negamax_ttm():
     print(f'T = {T}')
 
     print('--- negamax_ttm_b ---')
+    StatementLogger.global_index = 0
     T = TranspositionTable()
     Settings.visited = []
     negamax_ttm(v, alpha=0, beta=2, depth=4, T=T)
@@ -389,6 +429,7 @@ def run_negamax_ttm():
     print(f'T = {T}')
 
     print('--- negamax_ttm_c ---')
+    StatementLogger.global_index = 0
     Settings.visited = []
     negamax_ttm(v, alpha=0, beta=5, depth=2, T=T)
     graph_c = draw_tree_graphviz(v, 'negamax_ttm_c', visited=Settings.visited, special=['v'], with_labels=True)
@@ -397,6 +438,7 @@ def run_negamax_ttm():
 
 
 def run_negamax_ttw():
+    StatementLogger.global_index = 0
     u, node_map = make_tree()
     print('--- negamax_ttw ---')
     T = TranspositionTable()
