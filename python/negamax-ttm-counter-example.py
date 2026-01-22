@@ -118,6 +118,7 @@ def negamax_ttw(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
                 return t.value
 
     if depth == 0 or not u.children:
+        logger.log(f'negamax:      return {u.color.value * u.eval} (leaf)')
         logger.dump(f'{u.color.value * u.eval}')
         return u.color.value * u.eval
     value = -Settings.INFINITY
@@ -140,6 +141,7 @@ def negamax_ttw(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
     logger.log(f'table update: T[{u.id}] := (value={value}, depth={depth}, flag={flag})')
     T[u.id] = TableEntry(value, depth, flag)
 
+    logger.log(f'table update: return {value}')
     logger.dump(f'{value} ({flag})')
     return value
 
@@ -168,6 +170,7 @@ def negamax_ttm(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
                 return t.value
 
     if depth == 0 or not u.children:
+        logger.log(f'negamax:      return {u.color.value * u.eval} (leaf)')
         logger.dump(f'{u.color.value * u.eval}')
         return u.color.value * u.eval
 
@@ -189,6 +192,7 @@ def negamax_ttm(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
         logger.log(f'table update: T[{u.id}] := (value={value}, depth={depth}, flag={flag})')
         T[u.id] = TableEntry(value, depth, flag)
 
+    logger.log(f'table update: return {value}')
     logger.dump(f'{value} ({flag})')
     return value
 
