@@ -31,7 +31,7 @@ class StatementLogger:
     def log(self, statement: str):
         StatementLogger.global_index += 1
         n = StatementLogger.global_index
-        self.statements.append(f'{n:2} {statement}')
+        self.statements.append(f'{n:2} {statement} \\\\')
 
     def dump(self, return_value: str):
         lines = [f'{self.function_call} = {return_value}'] + self.statements
@@ -105,31 +105,31 @@ def negamax_ttw(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
         t = T[u.id]
         if t.depth >= depth:
             if t.flag == TableFlag.Exact:
-                logger.log(f'TL: return {t.value}')
+                logger.log(f'TL: return ${t.value}$')
                 logger.dump(f'{t.value} ({t.flag})')
                 return t.value
             elif t.flag == TableFlag.Lowerbound and t.value >= beta:
-                logger.log(f'TL: return {t.value}')
+                logger.log(f'TL: return ${t.value}$')
                 logger.dump(f'{t.value} ({t.flag})')
                 return t.value
             elif t.flag == TableFlag.Upperbound and t.value <= alpha:
-                logger.log(f'TL: return {t.value}')
+                logger.log(f'TL: return ${t.value}$')
                 logger.dump(f'{t.value} ({t.flag})')
                 return t.value
 
     if depth == 0 or not u.children:
-        logger.log(f'NS: return {u.color.value * u.eval} (leaf)')
+        logger.log(f'NS: return ${u.color.value * u.eval}$ ({"depth 0" if depth == 0 else "leaf"})')
         logger.dump(f'{u.color.value * u.eval}')
         return u.color.value * u.eval
     value = -Settings.INFINITY
-    logger.log(f'NS: value := {value}')
+    logger.log(f'NS: $\\mathit{{value}} := {value}$')
     for v in u.children:
         value = max(value, -negamax_ttw(v, -beta, -alpha, depth - 1, T))
-        logger.log(f'NS: value := {value}')
+        logger.log(f'NS: $\\mathit{{value}} := {value}$')
         alpha = max(alpha, value)
-        logger.log(f'NS: alpha := {alpha}')
+        logger.log(f'NS: $\\alpha := {alpha}$')
         if alpha >= beta:
-            logger.log(f'NS: break (alpha={alpha} >= beta={beta})')
+            logger.log(f'NS: break $(\\alpha={alpha} \\geq {beta})$')
             break
 
     if value <= alpha0:
@@ -138,10 +138,10 @@ def negamax_ttw(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
         flag = TableFlag.Lowerbound
     else:
         flag = TableFlag.Exact
-    logger.log(f'TU: T[{u.id}] := (value={value}, depth={depth}, flag={flag})')
+    logger.log(f'TU: $T[{u.id}] := ({value}, {depth}, {flag})$')
     T[u.id] = TableEntry(value, depth, flag)
 
-    logger.log(f'TU: return {value}')
+    logger.log(f'TU: return ${value}$')
     logger.dump(f'{value} ({flag})')
     return value
 
@@ -155,32 +155,32 @@ def negamax_ttm(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
         t = T[u.id]
         if t.depth >= depth:
             if t.flag == TableFlag.Exact:
-                logger.log(f'TL: return {t.value}')
+                logger.log(f'TL: return ${t.value}$')
                 logger.dump(f'{t.value} ({t.flag})')
                 return t.value
             elif t.flag == TableFlag.Lowerbound:
                 alpha = max(alpha, t.value)
-                logger.log(f'TL: alpha := {alpha}')
+                logger.log(f'TL: $\\alpha := {alpha}$')
             elif t.flag == TableFlag.Upperbound:
                 beta = min(beta, t.value)
-                logger.log(f'TL: beta := {beta}')
+                logger.log(f'TL: $\\beta := {beta}$')
             if alpha >= beta:
-                logger.log(f'TL: return {t.value}')
+                logger.log(f'TL: return ${t.value}$')
                 logger.dump(f'{t.value}')
                 return t.value
 
     if depth == 0 or not u.children:
-        logger.log(f'NS: return {u.color.value * u.eval} (leaf)')
+        logger.log(f'NS: return {u.color.value * u.eval} ({"depth 0" if depth == 0 else "leaf"})')
         logger.dump(f'{u.color.value * u.eval}')
         return u.color.value * u.eval
 
     value = -Settings.INFINITY
-    logger.log(f'NS: value := {value}')
+    logger.log(f'NS: $\\mathit{{value}} := {value}$')
     for v in u.children:
         value = max(value, -negamax_ttm(v, -beta, -max(value, alpha), depth - 1, T))
-        logger.log(f'NS: value := {value}')
+        logger.log(f'NS: $\\mathit{{value}} := {value}$')
         if value >= beta:
-            logger.log(f'NS: break (value >= beta={beta})')
+            logger.log(f'NS: break $(\\mathit{{value}} \\geq {beta}$)')
             break
 
     flag = TableFlag.Exact
@@ -189,10 +189,10 @@ def negamax_ttm(u: Node, alpha: int, beta: int, depth: int, T: TranspositionTabl
     if value >= beta:
         flag = TableFlag.Lowerbound
     if u.id not in T or T[u.id].depth <= depth:
-        logger.log(f'TU: T[{u.id}] := (value={value}, depth={depth}, flag={flag})')
+        logger.log(f'TU: $T[{u.id}] := ({value}, {depth}, {flag})$')
         T[u.id] = TableEntry(value, depth, flag)
 
-    logger.log(f'TU: return {value}')
+    logger.log(f'TU: return ${value}$')
     logger.dump(f'{value} ({flag})')
     return value
 
