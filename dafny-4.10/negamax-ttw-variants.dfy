@@ -6,14 +6,11 @@
 
 include "negamax-ttw.dfy"
 
-// Negamax with transposition table using current alpha for table updates
-// https://en.wikipedia.org/wiki/Negamax
+// This file contains three variations of NegamaxTTW, obtained by importing changes from NegamaxTTM.
 
+// Change 1: Use the current alpha instead of the original alpha for table updates
 abstract module NegamaxTTWCurrentAlphaModule refines NegamaxTTWModule
 {
-  // The Wikipedia 2025 version of negamax with a transposition table with
-  // one modification: the table update is done using the current value of alpha
-  // instead of the original value.
   class NegamaxTTWCurrentAlpha
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
@@ -96,13 +93,77 @@ abstract module NegamaxTTWCurrentAlphaModule refines NegamaxTTWModule
   }
 }
 
-// Negamax with transposition table using Fishburn 1983 value propagation
-// https://en.wikipedia.org/wiki/Negamax
+// Change 2: Put an extra condition on the table updates
+abstract module NegamaxTTWExtraDepthConditionModule refines NegamaxTTWModule
+{
+  class NegamaxTTWExtraDepthCondition
+  {
+    var T: TranspositionTable  // Memoization table for previously computed positions
 
+    method Negamax(u: Node, alpha0: bounded_int, beta0: bounded_int, depth:nat)
+      returns (result: bounded_int)
+      modifies this`T
+      requires alpha0 < beta0
+      requires turn_based()
+      requires is_valid_table(T)
+      ensures is_negamax_tt_result(result, u, alpha0, beta0, depth)
+      ensures is_valid_table(T)
+    {
+      var alpha, beta := alpha0, beta0;
+      if u in T.Keys
+      {
+        var t := T[u];
+        if t.depth >= depth && ((t.flag == Lowerbound && t.value >= beta) ||
+            (t.flag == Exact) || (t.flag == Upperbound && t.value <= alpha))
+        {
+          TableLookupReturnLemma(u, alpha, beta, depth, t, T);
+          return t.value;
+        }
+      }
+      if depth == 0 || |u.children| == 0
+      {
+        DepthZeroReturnLemma(u, depth, alpha0, beta0);
+        return color(u) * u.eval;
+      }
+      var value: bounded_int := -INFINITY;
+      for i := 0 to |u.children|
+        invariant is_valid_table(T)
+        invariant 0 <= i <= |u.children|
+        invariant i == 0 ==> value == -INFINITY && alpha == alpha0
+        invariant alpha0 <= alpha < beta0
+        invariant value <= alpha0 ==> alpha == alpha0
+        invariant alpha0 < value < beta0 ==> value == alpha
+        invariant i > 0 ==> exists u': Node :: is_expansion(u', u, depth) && is_partial_negamax_ab_result(value, u', i, alpha0, beta0)
+        invariant i == |u.children| ==> is_negamax_tt_result(value, u, alpha0, beta0, depth)
+      {
+        ghost var old_alpha := alpha;
+        ghost var old_value := value;
+        var v := u.children[i];
+        var negamax_v := Negamax(v, -beta, -alpha, depth - 1);
+        value := max(value, -negamax_v);
+        alpha := max(alpha, value);
+        if alpha >= beta
+        {
+          LoopBreakLemma(u, v, i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+          break;
+        }
+        LoopMaintenanceLemma(u, v, i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      }
+      TableUpdateLemma(value, u, alpha0, beta0, depth, T);
+      if u !in T.Keys || T[u].depth <= depth  // extra condition
+      {
+        if value <= alpha0      {T := T[u:=TableEntry_(depth,value,Upperbound)];}
+        else if alpha0 < value < beta0 {T:=T[u:=TableEntry_(depth,value,Exact)];}
+        else if value >= beta0  {T := T[u:=TableEntry_(depth,value,Lowerbound)];}
+      }
+        return value;
+    }
+  }
+}
+
+// Change 3: Use the Fishburn propagation variant of alpha-beta
 abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModule
 {
-  // The Wikipedia 2025 version of negamax with a transposition table with
-  // one modification: the value propagation is done according to Fishburn 1983
   class NegamaxTTWFishburnPropagation
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
