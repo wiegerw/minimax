@@ -12,62 +12,93 @@ Usage:  python extract_dafny_stats.py   (run from the repo's dafny/ directory)
 import os
 import re
 
-# Files to skip
 SKIP_FILES = {"test-definitions.dfy"}
+
+MODULE_RE = re.compile(r'^\s*abstract\s+module\s+(\w+)')
+LEMMA_RE  = re.compile(r'^\s*lemma\s+(\w+)')
+METHOD_RE = re.compile(r'^\s*(?:ghost\s+)?method\s+(\w+)\s*\(([^)]*)\)')
 
 def extract_info(filepath):
     modules = []
     current_module = None
-    in_comment = False
+    in_block_comment = False
     loc = 0
+
     with open(filepath, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-    for raw_line in lines:
-        line = raw_line.strip()
-        # Count lines of code (excluding blank lines and comments)
-        if line and not line.startswith("//"):
+        for raw_line in f:
+            line = raw_line.rstrip()
+
+            # --- Handle block comments ---
+            if in_block_comment:
+                if "*/" in line:
+                    in_block_comment = False
+                continue
+
+            if "/*" in line:
+                if "*/" not in line:
+                    in_block_comment = True
+                continue
+
+            stripped = line.strip()
+
+            # --- Skip line comments and blank lines ---
+            if not stripped or stripped.startswith("//"):
+                continue
+
+            # --- Count LoC ---
             loc += 1
-        # Very simple comment block detection (skip multi-line comments roughly)
-        if "/*" in line:
-            in_comment = True
-        if "*/" in line:
-            in_comment = False
-            continue
-        if in_comment:
-            continue
-        # Detect module start
-        mod_match = re.match(r'^\s*abstract\s+module\s+(\w+)', line)
-        if mod_match:
-            current_module = mod_match.group(1)
-            modules.append({"module": current_module, "lemmas": [], "methods": []})
-            continue
-        if current_module:
-            # Detect lemma declarations (lemma or ghost method that are lemma-like)
-            lemma_match = re.match(r'^\s*lemma\s+(\w+)', line)
-            if lemma_match and 'lemma' not in line.split('//')[0].split('requires'):  # crude filter
-                modules[-1]["lemmas"].append(lemma_match.group(1))
-            # Detect method declarations
-            meth_match = re.match(r'^\s*(?:ghost\s+)?method\s+(\w+)', line)
-            if meth_match and meth_match.group(1) not in ["requires", "ensures", "modifies"]:
-                modules[-1]["methods"].append(meth_match.group(1))
-            # Detect lemma calls inside methods? (not strictly needed)
+
+            # --- Module detection ---
+            m = MODULE_RE.match(stripped)
+            if m:
+                current_module = m.group(1)
+                modules.append({
+                    "module": current_module,
+                    "lemmas": [],
+                    "methods": []
+                })
+                continue
+
+            if not current_module:
+                continue
+
+            # --- Lemma detection ---
+            m = LEMMA_RE.match(stripped)
+            if m:
+                modules[-1]["lemmas"].append(m.group(1))
+                continue
+
+            # --- Method detection (with signature) ---
+            m = METHOD_RE.match(stripped)
+            if m:
+                name, params = m.groups()
+                signature = f"{name}({params.strip()})"
+                modules[-1]["methods"].append(signature)
+
     return loc, modules
 
 def main():
-    folder = "."  # assume we are in dafny/
-    files = sorted([f for f in os.listdir(folder) if f.endswith(".dfy") and f not in SKIP_FILES])
-    print("file,module,loc_total,lemma_count,method_count,lemma_names,method_names")
+    folder = "."
+    files = sorted(
+        f for f in os.listdir(folder)
+        if f.endswith(".dfy") and f not in SKIP_FILES
+    )
+
+    print("file,module,loc_total,lemma_count,method_count,lemma_names,method_signatures")
+
     for fname in files:
-        fpath = os.path.join(folder, fname)
-        loc, modules = extract_info(fpath)
-        if modules:
-            for m in modules:
-                lemma_names = ";".join(m["lemmas"])
-                method_names = ";".join(m["methods"])
-                print(f'{fname},{m["module"]},{loc},{len(m["lemmas"])},{len(m["methods"])},'
-                      f'{lemma_names},{method_names}')
-        else:
-            print(f'{fname},\u2014,{loc},0,0,,')  # no module found
+        loc, modules = extract_info(os.path.join(folder, fname))
+        if not modules:
+            print(f"{fname},—,{loc},0,0,,")
+            continue
+
+        for m in modules:
+            print(
+                f"{fname},{m['module']},{loc},"
+                f"{len(m['lemmas'])},{len(m['methods'])},"
+                f"{';'.join(m['lemmas'])},"
+                f"{';'.join(m['methods'])}"
+            )
 
 if __name__ == "__main__":
     main()

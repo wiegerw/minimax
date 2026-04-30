@@ -1,20 +1,20 @@
-file,module,loc_total,lemma_count,method_count,lemma_names,method_names
+file,module,loc_total,lemma_count,method_count,lemma_names,method_signatures
 definitions.dfy,Definitions,205,1,0,PartialNegamaxEquivalenceLemma,
 lemmas.dfy,Lemmas,128,14,0,ChildrenAppendLemma;ChildrenFinalLemma;PartialMinimaxABLemma;PartialMinimaxLemma;PartialNegamaxLemma;MinimaxNegamaxLemma;IsABResultLemma;NegamaxDefinitionsLemma;NegamaxChildrenLemma;TruncateLemma;PartialNegamaxAlphaBetaLemma;SubtreeReflexivityLemma;SubtreeTransitivityHelperLemma;SubtreeTransitivityLemma,
-minimax-alpha-beta.dfy,MinimaxKnuth1975Module,301,2,1,LoopBreakLemma;LoopMaintenanceLemma,Minimax
-minimax-alpha-beta.dfy,MinimaxABFishburn1983Module,301,2,1,LoopBreakLemma;LoopMaintenanceLemma,Minimax
-minimax-alpha-beta.dfy,MinimaxABWiki2025Module,301,2,1,LoopBreakLemma;LoopMaintenanceLemma,Minimax
-minimax.dfy,MinimaxModule,67,1,1,LoopMaintenanceLemma,Minimax
-negamax-alpha-beta.dfy,NegamaxABKnuth1975Module,349,2,1,LoopBreakLemma;LoopMaintenanceLemma,Negamax
-negamax-alpha-beta.dfy,NegamaxABFishburn1983Module,349,2,1,LoopBreakLemma;LoopMaintenanceLemma,Negamax
-negamax-alpha-beta.dfy,NegamaxWikipedia2025Module,349,2,1,LoopBreakLemma;LoopMaintenanceLemma,Negamax
-negamax-alpha-beta.dfy,NegamaxWikipedia2025,349,4,1,NoChildrenReturnLemma;LoopEntryLemma;LoopBreakLemma;LoopMaintenanceLemma,Negamax
-negamax-depth-limited.dfy,NegamaxDepthLimitedModule,243,1,1,LoopMaintenanceLemma,Negamax
-negamax-depth-limited.dfy,NegamaxAlphaBetaDepthLimitedModule,243,4,1,LoopEntryLemma;LoopMaintenanceLemma;DepthZeroReturnLemma;LoopBreakLemma,Negamax
-negamax-depth-limited.dfy,NegamaxPVSModule,243,1,1,PVSLemma,Negamax
-negamax-ttw-variants.dfy,NegamaxTTWCurrentAlphaModule,340,1,1,TableUpdateCurrentAlphaLemma,Negamax
-negamax-ttw-variants.dfy,NegamaxTTWExtraDepthConditionModule,340,0,1,,Negamax
-negamax-ttw-variants.dfy,NegamaxTTWFishburnPropagationModule,340,4,1,LoopBreakLemma2;LoopBreakLemma;LoopMaintenanceLemma2;LoopMaintenanceLemma,Negamax
-negamax-ttw.dfy,NegamaxTTWModule,413,4,1,LoopBreakLemma2;LoopBreakLemma;LoopMaintenanceLemma2;LoopMaintenanceLemma,Negamax
+minimax-alpha-beta.dfy,MinimaxKnuth1975Module,301,2,1,LoopBreakLemma;LoopMaintenanceLemma,Minimax(u: Node, alpha: bounded_int, beta: bounded_int)
+minimax-alpha-beta.dfy,MinimaxABFishburn1983Module,301,2,1,LoopBreakLemma;LoopMaintenanceLemma,Minimax(u: Node, alpha: bounded_int, beta: bounded_int)
+minimax-alpha-beta.dfy,MinimaxABWiki2025Module,301,2,1,LoopBreakLemma;LoopMaintenanceLemma,Minimax(u: Node, alpha0: bounded_int, beta0: bounded_int)
+minimax.dfy,MinimaxModule,67,1,1,LoopMaintenanceLemma,Minimax(u: Node)
+negamax-alpha-beta.dfy,NegamaxABKnuth1975Module,349,2,1,LoopBreakLemma;LoopMaintenanceLemma,Negamax(u: Node, alpha: bounded_int, beta: bounded_int)
+negamax-alpha-beta.dfy,NegamaxABFishburn1983Module,349,2,1,LoopBreakLemma;LoopMaintenanceLemma,Negamax(u: Node, alpha: bounded_int, beta: bounded_int)
+negamax-alpha-beta.dfy,NegamaxWikipedia2025Module,349,2,1,LoopBreakLemma;LoopMaintenanceLemma,Negamax(u: Node, alpha0: bounded_int, beta0: bounded_int)
+negamax-alpha-beta.dfy,NegamaxWikipedia2025,349,4,1,NoChildrenReturnLemma;LoopEntryLemma;LoopBreakLemma;LoopMaintenanceLemma,Negamax(u: Node, alpha0: bounded_int, beta0: bounded_int)
+negamax-depth-limited.dfy,NegamaxDepthLimitedModule,243,1,1,LoopMaintenanceLemma,Negamax(u: Node, depth: nat)
+negamax-depth-limited.dfy,NegamaxAlphaBetaDepthLimitedModule,243,4,1,LoopEntryLemma;LoopMaintenanceLemma;DepthZeroReturnLemma;LoopBreakLemma,Negamax(u: Node, alpha0: bounded_int, beta0: bounded_int, depth: nat)
+negamax-depth-limited.dfy,NegamaxPVSModule,243,1,1,PVSLemma,Negamax(u: Node, alpha0: bounded_int, beta0: bounded_int, depth: nat)
+negamax-ttw-variants.dfy,NegamaxTTWCurrentAlphaModule,340,1,1,TableUpdateCurrentAlphaLemma,Negamax(u: Node, alpha0: bounded_int, beta0: bounded_int, depth:nat)
+negamax-ttw-variants.dfy,NegamaxTTWExtraDepthConditionModule,340,0,1,,Negamax(u: Node, alpha0: bounded_int, beta0: bounded_int, depth:nat)
+negamax-ttw-variants.dfy,NegamaxTTWFishburnPropagationModule,340,4,1,LoopBreakLemma2;LoopBreakLemma;LoopMaintenanceLemma2;LoopMaintenanceLemma,Negamax(u: Node, alpha: bounded_int, beta: bounded_int, depth:nat)
+negamax-ttw.dfy,NegamaxTTWModule,413,4,1,LoopBreakLemma2;LoopBreakLemma;LoopMaintenanceLemma2;LoopMaintenanceLemma,Negamax(u: Node, alpha0: bounded_int, beta0: bounded_int, depth:nat)
 negamax-ttw.dfy,NegamaxTTWCommonModule,413,13,0,ExpansionInludesTruncatedTreeLemma;ExpansionIsSubtreeLemma;ExpansionReflexivityLemma;ExpansionTransitivityLemma;ExpansionDecreaseDepthLemma;ExpansionReplaceChildLemma;NegamaxDepthLemma;NegamaxDecreaseDepthLemma;TableLookupReturnLemma;DepthZeroReturnLemma;ApplyNegamaxLemma;MinMaxLemma;TableUpdateLemma,
-negamax.dfy,NegamaxModule,56,1,1,LoopMaintenanceLemma,Negamax
+negamax.dfy,NegamaxModule,56,1,1,LoopMaintenanceLemma,Negamax(u: Node)
