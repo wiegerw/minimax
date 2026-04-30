@@ -17,7 +17,6 @@ abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
 
-    // Negamax with transposition table: caches results to avoid recomputation
     method Negamax(u: Node, alpha0: bounded_int, beta0: bounded_int, depth:nat)
       returns (result: bounded_int)
       modifies this`T

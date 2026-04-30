@@ -46,8 +46,7 @@ abstract module NegamaxTTWCurrentAlphaModule refines NegamaxTTWModule
       }
       var value: bounded_int := -INFINITY;
 
-      var i := 0;
-      while i != |u.children|
+      for i := 0 to |u.children|
         invariant is_valid_table(T)
         invariant 0 <= i <= |u.children|
         invariant i == 0 ==> value == -INFINITY && alpha == alpha0
@@ -69,20 +68,36 @@ abstract module NegamaxTTWCurrentAlphaModule refines NegamaxTTWModule
           break;
         }
         LoopMaintenanceLemma(u, v, i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
-        i := i + 1;
       }
 
-      reveal is_negamax_ab_result();
       // N.B. The cases are not mutually exclusive. The upperbound case must be placed
       // after the lowerbound case. This is because after a break in the loop we want to
       // mark the result as a lowerbound.
+      TableUpdateCurrentAlphaLemma(value, u, alpha, alpha0, beta0, depth, T);
       if value >= beta0   { T := T[u:=TableEntry_(depth,value,Lowerbound)]; }
       else if alpha < value < beta0 { T := T[u:=TableEntry_(depth,value,Exact)]; }
       else if value <= alpha   { T := T[u:=TableEntry_(depth,value,Upperbound)]; }
       return value;
     }
+
+    lemma TableUpdateCurrentAlphaLemma(value: bounded_int, u: Node, alpha: bounded_int, alpha0: bounded_int, beta0: bounded_int, depth: nat, T: TranspositionTable)
+      requires alpha0 < beta0
+      requires value <= alpha0 ==> alpha == alpha0
+      requires turn_based()
+      requires is_negamax_tt_result(value, u, alpha0, beta0, depth)
+      requires is_valid_table(T)
+      ensures value >= beta0 ==> is_valid_table(T[u := TableEntry_(depth, value, Lowerbound)])
+      ensures !(value >= beta0) && alpha < value < beta0 ==> is_valid_table(T[u := TableEntry_(depth, value, Exact)])
+      ensures !(value >= beta0) && value <= alpha ==> is_valid_table(T[u := TableEntry_(depth, value, Upperbound)])
+    {
+      reveal is_negamax_ab_result();
+      var u': Node :| is_expansion(u', u, depth) && is_negamax_ab_result(value, u', alpha0, beta0);
+    }
   }
 }
+
+// Negamax with transposition table using Fishburn 1983 value propagation
+// https://en.wikipedia.org/wiki/Negamax
 
 abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModule
 {
