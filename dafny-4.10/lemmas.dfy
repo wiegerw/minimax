@@ -104,6 +104,35 @@ abstract module Lemmas
     }
   }
 
+  lemma ApplyNegamaxLemma(v: seq<Node>, i: nat)
+    requires 0 <= i < |v|
+    ensures apply_negamax(v[..i+1]) == apply_negamax(v[..i]) + [negamax(v[i])]
+  {}
+
+  lemma MinMaxLemma(u: Node, i: nat)
+    requires 0 <= i < |u.children|
+    requires partial_negamax(u, i) == -minimum'(apply_negamax(u.children[..i]))
+    ensures partial_negamax(u, i + 1) == max(partial_negamax(u, i), -negamax(u.children[i]))
+  {
+    reveal partial_negamax();
+    ApplyNegamaxLemma(u.children, i);
+    var v := u.children[i];
+    calc
+    {
+      partial_negamax(u, i+1);
+      ==
+      -minimum'(apply_negamax(u.children[..i+1]));
+      ==
+      -minimum'(apply_negamax(u.children[..i]) + [negamax(u.children[i])]);
+      ==
+      -minimum'(apply_negamax(u.children[..i]) + [negamax(v)]);
+      ==
+      -min(minimum'(apply_negamax(u.children[..i])), negamax(v));
+      ==
+      max(partial_negamax(u, i), -negamax(v));
+    }
+  }
+
   // Proves properties of depth truncation: preserves child count and recursive structure
   lemma TruncateLemma(u: Node, i: nat, depth: nat)
     requires 0 <= i < |u.children|

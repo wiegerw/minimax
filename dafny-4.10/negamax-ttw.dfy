@@ -434,35 +434,6 @@ abstract module NegamaxTTWCommonModule
     assert is_negamax_tt_result(color(u) * u.eval, u', alpha0, beta0, 0);
   }
 
-  lemma ApplyNegamaxLemma(v: seq<Node>, i: nat)
-    requires 0 <= i < |v|
-    ensures apply_negamax(v[..i+1]) == apply_negamax(v[..i]) + [negamax(v[i])]
-  {}    
-
-  lemma MinMaxLemma(u: Node, i: nat)
-    requires 0 <= i < |u.children|
-    requires partial_negamax(u, i) == -minimum'(apply_negamax(u.children[..i]))
-    ensures partial_negamax(u, i + 1) == max(partial_negamax(u, i), -negamax(u.children[i]))
-  {
-    reveal partial_negamax();
-    ApplyNegamaxLemma(u.children, i);
-    var v := u.children[i];
-    calc
-    {
-      partial_negamax(u, i+1);
-      ==
-      -minimum'(apply_negamax(u.children[..i+1]));
-      ==
-      -minimum'(apply_negamax(u.children[..i]) + [negamax(u.children[i])]);
-      ==
-      -minimum'(apply_negamax(u.children[..i]) + [negamax(v)]);
-      ==
-      -min(minimum'(apply_negamax(u.children[..i])), negamax(v));
-      ==
-      max(partial_negamax(u, i), -negamax(v));
-    }
-  }
-
   lemma TableUpdateLemma(value: bounded_int, u: Node, alpha0: bounded_int, beta0: bounded_int, depth: nat, T: TranspositionTable)
     requires alpha0 < beta0
     requires is_valid_table(T)
