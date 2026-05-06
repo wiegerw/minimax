@@ -40,9 +40,18 @@ abstract module NegamaxPlaat1996Module
     requires t == T[u]
     requires alpha < beta
     requires (t.lowerbound >= beta) || (t.upperbound <= alpha)
-    ensures is_negamax_tt_result(if t.lowerbound >= beta then t.lowerbound else t.upperbound, u, alpha, beta)
+    ensures t.lowerbound >= beta ==> is_negamax_tt_result(t.lowerbound, u, alpha, beta)
+    ensures t.upperbound <= alpha ==> is_negamax_tt_result(t.upperbound, u, alpha, beta)
   {
     reveal is_negamax_ab_result();
+    if t.lowerbound >= beta
+    {
+      assert t.lowerbound > -INFINITY;
+    }
+    if t.upperbound <= alpha
+    {
+      assert t.upperbound < INFINITY;
+    }
   }
 
   lemma TableUpdateLemma(result: bounded_int, u: Node, alpha0: bounded_int, beta0: bounded_int, T: PlaatTranspositionTable)
@@ -131,6 +140,8 @@ abstract module NegamaxPlaat1996Module
         }
         result := value;
       }
+
+      assert result > alpha0 || result < beta0;
 
       // Update the transposition table
       TableUpdateLemma(result, u, alpha0, beta0, T);
