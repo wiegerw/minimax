@@ -15,11 +15,6 @@ abstract module NegamaxPlaat1996Module
   import opened Definitions
   import opened Lemmas
 
-  ghost predicate is_negamax_tt_result(value: bounded_int, u: Node, alpha: bounded_int, beta: bounded_int)
-  {
-    is_negamax_ab_result(value, u, alpha, beta)
-  }
-
   datatype PlaatTableEntry = PlaatTableEntry_(lowerbound: bounded_int, upperbound: bounded_int)
   type PlaatTranspositionTable = map<Node, PlaatTableEntry>
 
@@ -40,8 +35,8 @@ abstract module NegamaxPlaat1996Module
     requires t == T[u]
     requires alpha < beta
     requires (t.lowerbound >= beta) || (t.upperbound <= alpha)
-    ensures t.lowerbound >= beta ==> is_negamax_tt_result(t.lowerbound, u, alpha, beta)
-    ensures t.upperbound <= alpha ==> is_negamax_tt_result(t.upperbound, u, alpha, beta)
+    ensures t.lowerbound >= beta ==> is_negamax_ab_result(t.lowerbound, u, alpha, beta)
+    ensures t.upperbound <= alpha ==> is_negamax_ab_result(t.upperbound, u, alpha, beta)
   {
     reveal is_negamax_ab_result();
     if t.lowerbound >= beta
@@ -57,7 +52,7 @@ abstract module NegamaxPlaat1996Module
   lemma TableUpdateLemma(result: bounded_int, u: Node, alpha0: bounded_int, beta0: bounded_int, T: PlaatTranspositionTable)
     requires alpha0 < beta0
     requires is_valid_table(T)
-    requires is_negamax_tt_result(result, u, alpha0, beta0)
+    requires is_negamax_ab_result(result, u, alpha0, beta0)
     ensures
       var t := if u in T then T[u] else PlaatTableEntry_(-INFINITY, INFINITY);
       var lower := if result > alpha0 then result else t.lowerbound;
@@ -77,7 +72,7 @@ abstract module NegamaxPlaat1996Module
       requires alpha0 < beta0
       requires is_valid_table(T)
       modifies this`T
-      ensures is_negamax_tt_result(result, u, alpha0, beta0)
+      ensures is_negamax_ab_result(result, u, alpha0, beta0)
       ensures is_valid_table(T)
       decreases u
     {
@@ -121,7 +116,7 @@ abstract module NegamaxPlaat1996Module
           invariant alpha0 < value < beta0 ==> value == alpha
           invariant i == 0 ==> value == -INFINITY && alpha == alpha0
           invariant i > 0 ==> is_partial_negamax_ab_result(value, u, i, alpha0, beta0)
-          invariant i == |u.children| ==> is_negamax_tt_result(value, u, alpha0, beta0)
+          invariant i == |u.children| ==> is_negamax_ab_result(value, u, alpha0, beta0)
         {
           ghost var old_alpha := alpha;
           ghost var old_value := value;
@@ -156,7 +151,7 @@ abstract module NegamaxPlaat1996Module
 
   lemma NoChildrenReturnLemma(u: Node, alpha0: bounded_int, beta0: bounded_int)
     requires |u.children| == 0
-    ensures is_negamax_tt_result(color(u) * u.eval, u, alpha0, beta0)
+    ensures is_negamax_ab_result(color(u) * u.eval, u, alpha0, beta0)
   {
     reveal is_negamax_ab_result();
   }
@@ -169,10 +164,10 @@ abstract module NegamaxPlaat1996Module
     requires alpha0 <= old_alpha < beta0
     requires value == max(old_value, -negamax_v)
     requires alpha == max(old_alpha, value)
-    requires is_negamax_tt_result(negamax_v, v, -beta0, -old_alpha)
+    requires is_negamax_ab_result(negamax_v, v, -beta0, -old_alpha)
     requires i == 0 ==> old_value == -INFINITY && old_alpha == alpha0
     requires i > 0 ==> is_partial_negamax_ab_result(old_value, u, i, alpha0, beta0)
-    ensures is_negamax_tt_result(value, u, alpha0, beta0)
+    ensures is_negamax_ab_result(value, u, alpha0, beta0)
   {
     reveal partial_negamax();
     reveal is_negamax_ab_result();
@@ -191,11 +186,11 @@ abstract module NegamaxPlaat1996Module
     requires alpha0 < old_value < beta0 ==> old_alpha == old_value
     requires value == max(old_value, -negamax_v)
     requires alpha == max(old_alpha, value)
-    requires is_negamax_tt_result(negamax_v, v, -beta0, -old_alpha)
+    requires is_negamax_ab_result(negamax_v, v, -beta0, -old_alpha)
     requires i == 0 ==> old_value == -INFINITY && old_alpha == alpha0
     requires i > 0 ==> is_partial_negamax_ab_result(old_value, u, i, alpha0, beta0)
     ensures is_partial_negamax_ab_result(value, u, i + 1, alpha0, beta0)
-    ensures i == |u.children| - 1 ==> is_negamax_tt_result(value, u, alpha0, beta0)
+    ensures i == |u.children| - 1 ==> is_negamax_ab_result(value, u, alpha0, beta0)
   {
     reveal partial_negamax();
     reveal is_negamax_ab_result();
