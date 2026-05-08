@@ -78,11 +78,15 @@ def minimax_tt_plaat_1996(u: Node, alpha: int, beta: int, T: TranspositionTable)
         for v in u.children:
             value = min(value, minimax_tt_plaat_1996(v, alpha, beta, T))
             beta = min(beta, value)
+            if beta <= alpha:
+                break
     else:
         value = -MinimaxSettings.INFINITY
         for v in u.children:
             value = max(value, minimax_tt_plaat_1996(v, alpha, beta, T))
             alpha = max(alpha, value)
+            if alpha >= beta:
+                break
 
     if value < beta:
         t.upperbound = value

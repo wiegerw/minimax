@@ -246,7 +246,7 @@ abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModu
   {
     reveal is_negamax_ab_result();
     reveal partial_negamax();
-    MinMaxLemma(u', i);
+    NegamaxMinMaxLemma(u', i);
     assert partial_negamax(u', i + 1) == max(partial_negamax(u', i), -negamax(u'.children[i]));
     assert value <= negamax(u');
   }
@@ -310,7 +310,7 @@ abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModu
   {
     reveal is_negamax_ab_result();
     reveal partial_negamax();  
-    MinMaxLemma(u'', i);
+    NegamaxMinMaxLemma(u'', i);
     assert partial_negamax(u'', i + 1) == max(partial_negamax(u'', i), -negamax(u''.children[i]));
     assert partial_negamax(u'', i + 1) == max(partial_negamax(u'', i), -negamax(v'));
     assert partial_negamax(u'', i + 1) < beta;

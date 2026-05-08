@@ -109,7 +109,7 @@ abstract module Lemmas
     ensures apply_negamax(v[..i+1]) == apply_negamax(v[..i]) + [negamax(v[i])]
   {}
 
-  lemma MinMaxLemma(u: Node, i: nat)
+  lemma NegamaxMinMaxLemma(u: Node, i: nat)
     requires 0 <= i < |u.children|
     requires partial_negamax(u, i) == -minimum'(apply_negamax(u.children[..i]))
     ensures partial_negamax(u, i + 1) == max(partial_negamax(u, i), -negamax(u.children[i]))

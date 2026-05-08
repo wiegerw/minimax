@@ -206,7 +206,7 @@ abstract module NegamaxTTWModule
     ensures apply_negamax(v[..i+1]) == apply_negamax(v[..i]) + [negamax(v[i])]
   {}    
 
-  lemma MinMaxLemma(u: Node, i: nat)
+  lemma NegamaxMinMaxLemma(u: Node, i: nat)
     requires 0 <= i < |u.children|
     requires partial_negamax(u, i) == -minimum'(apply_negamax(u.children[..i]))
     ensures partial_negamax(u, i + 1) == max(partial_negamax(u, i), -negamax(u.children[i]))
@@ -320,7 +320,7 @@ abstract module NegamaxTTWModule
     reveal is_negamax_ab_result();
     reveal partial_negamax();
 
-    MinMaxLemma(u', i);
+    NegamaxMinMaxLemma(u', i);
     assert partial_negamax(u', i + 1) == max(partial_negamax(u', i), -negamax(v'));
     assert partial_negamax(u', i + 1) >= beta0;
     assert value >= beta0;
@@ -397,7 +397,7 @@ abstract module NegamaxTTWModule
     assert negamax(v') >= -old_alpha <==> negamax_v >= -old_alpha;
     assert value == max(old_value, -negamax_v);
     assert alpha == max(old_alpha, value);
-    MinMaxLemma(u'', i);
+    NegamaxMinMaxLemma(u'', i);
     assert partial_negamax(u'', i + 1) == max(partial_negamax(u'', i), -negamax(u''.children[i]));
     assert partial_negamax(u'', i + 1) == max(partial_negamax(u'', i), -negamax(v'));
     assert partial_negamax(u'', i + 1) < beta0;

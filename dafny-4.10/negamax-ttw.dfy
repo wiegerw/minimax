@@ -90,7 +90,7 @@ abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
     reveal is_negamax_ab_result();
     reveal partial_negamax();
 
-    MinMaxLemma(u', i);
+    NegamaxMinMaxLemma(u', i);
     assert partial_negamax(u', i + 1) == max(partial_negamax(u', i), -negamax(v'));
     assert partial_negamax(u', i + 1) >= beta0;
     assert value >= beta0;
@@ -167,7 +167,7 @@ abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
     assert negamax(v') >= -old_alpha <==> negamax_v >= -old_alpha;
     assert value == max(old_value, -negamax_v);
     assert alpha == max(old_alpha, value);
-    MinMaxLemma(u'', i);
+    NegamaxMinMaxLemma(u'', i);
     assert partial_negamax(u'', i + 1) == max(partial_negamax(u'', i), -negamax(u''.children[i]));
     assert partial_negamax(u'', i + 1) == max(partial_negamax(u'', i), -negamax(v'));
     assert partial_negamax(u'', i + 1) < beta0;

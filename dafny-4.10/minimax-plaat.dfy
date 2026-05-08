@@ -128,10 +128,10 @@ abstract module MinimaxPlaat1996Module
 
           if beta <= alpha0
           {
-            LoopBreakLemmaBlack(u, v, i, alpha0, beta0, old_beta, old_value, beta, value, minimax_v);
+            LoopBreakBlackLemma(u, v, i, alpha0, beta0, old_beta, old_value, beta, value, minimax_v);
             break;
           }
-          LoopMaintenanceLemmaBlack(u, v, i, alpha0, beta0, old_beta, old_value, beta, value, minimax_v);
+          LoopMaintenanceBlackLemma(u, v, i, alpha0, beta0, old_beta, old_value, beta, value, minimax_v);
         }
         result := value;
       }
@@ -160,10 +160,10 @@ abstract module MinimaxPlaat1996Module
 
           if alpha >= beta0
           {
-            LoopBreakLemmaWhite(u, v, i, alpha0, beta0, old_alpha, old_value, alpha, value, minimax_v);
+            LoopBreakWhiteLemma(u, v, i, alpha0, beta0, old_alpha, old_value, alpha, value, minimax_v);
             break;
           }
-          LoopMaintenanceLemmaWhite(u, v, i, alpha0, beta0, old_alpha, old_value, alpha, value, minimax_v);
+          LoopMaintenanceWhiteLemma(u, v, i, alpha0, beta0, old_alpha, old_value, alpha, value, minimax_v);
         }
         result := value;
       }
@@ -186,7 +186,7 @@ abstract module MinimaxPlaat1996Module
     reveal is_minimax_ab_result();
   }
 
-  lemma LoopBreakLemmaBlack(u: Node, v: Node, i: nat, alpha0: bounded_int, beta0: bounded_int, old_beta: bounded_int, old_value: bounded_int, beta: bounded_int, value: bounded_int, minimax_v: bounded_int)
+  lemma LoopBreakBlackLemma(u: Node, v: Node, i: nat, alpha0: bounded_int, beta0: bounded_int, old_beta: bounded_int, old_value: bounded_int, beta: bounded_int, value: bounded_int, minimax_v: bounded_int)
     requires turn_based()
     requires u.color == Black
     requires 0 <= i < |u.children|
@@ -206,7 +206,7 @@ abstract module MinimaxPlaat1996Module
     PartialMinimaxLemma(u);
   }
 
-  lemma LoopMaintenanceLemmaBlack(u: Node, v: Node, i: nat, alpha0: bounded_int, beta0: bounded_int, old_beta: bounded_int, old_value: bounded_int, beta: bounded_int, value: bounded_int, minimax_v: bounded_int)
+  lemma LoopMaintenanceBlackLemma(u: Node, v: Node, i: nat, alpha0: bounded_int, beta0: bounded_int, old_beta: bounded_int, old_value: bounded_int, beta: bounded_int, value: bounded_int, minimax_v: bounded_int)
     requires turn_based()
     requires u.color == Black
     requires 0 <= i < |u.children|
@@ -229,7 +229,7 @@ abstract module MinimaxPlaat1996Module
     MinimaxMinMaxLemma(u, i);
   }
 
-  lemma LoopBreakLemmaWhite(u: Node, v: Node, i: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, minimax_v: bounded_int)
+  lemma LoopBreakWhiteLemma(u: Node, v: Node, i: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, minimax_v: bounded_int)
     requires turn_based()
     requires u.color == White
     requires 0 <= i < |u.children|
@@ -249,7 +249,7 @@ abstract module MinimaxPlaat1996Module
     PartialMinimaxLemma(u);
   }
 
-  lemma LoopMaintenanceLemmaWhite(u: Node, v: Node, i: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, minimax_v: bounded_int)
+  lemma LoopMaintenanceWhiteLemma(u: Node, v: Node, i: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, minimax_v: bounded_int)
     requires turn_based()
     requires u.color == White
     requires 0 <= i < |u.children|

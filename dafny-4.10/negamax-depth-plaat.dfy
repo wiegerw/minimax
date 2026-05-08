@@ -240,7 +240,7 @@ abstract module NegamaxDepthPlaat1996Module
     assert is_negamax_ab_result(value, u', alpha0, beta0);
   }
 
-  lemma LoopBreakLemma2(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
+  lemma LoopBreakHelperLemma(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
     requires turn_based()
     requires 0 <= i < |u.children|
     requires |u.children| == |u'.children|
@@ -255,8 +255,7 @@ abstract module NegamaxDepthPlaat1996Module
   {
     reveal is_negamax_ab_result();
     reveal partial_negamax();
-
-    MinMaxLemma(u', i);
+    NegamaxMinMaxLemma(u', i);
     PartialNegamaxLemma(u');
   }
 
@@ -280,18 +279,18 @@ abstract module NegamaxDepthPlaat1996Module
     {
       var u': Node :| is_expansion(u', u, depth) && is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0);
       var u'' := replace_child(u', i, v');
-      LoopBreakLemma2(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      LoopBreakHelperLemma(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
     }
     else
     {
       reveal partial_negamax();
       var u' := replace_child(u, i, v');
       ExpansionReplaceChildLemma(u, u', v, v', i, depth);
-      LoopBreakLemma2(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      LoopBreakHelperLemma(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
     }
   }
 
-  lemma LoopMaintenanceLemma2(u': Node, u'': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
+  lemma LoopMaintenanceHelperLemma(u': Node, u'': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
     requires 0 <= i < |u'.children|
     requires |u'.children| == |u''.children|
     requires u'' == replace_child(u', i, v')
@@ -307,7 +306,7 @@ abstract module NegamaxDepthPlaat1996Module
   {
     reveal is_negamax_ab_result();
     reveal partial_negamax();
-    MinMaxLemma(u'', i);
+    NegamaxMinMaxLemma(u'', i);
   }
 
   lemma LoopMaintenanceLemma(u: Node, v: Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
@@ -336,7 +335,7 @@ abstract module NegamaxDepthPlaat1996Module
       var u': Node :| is_expansion(u', u, depth) && is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0);
       var u'' := replace_child(u', i, v');
       assert is_expansion(u'', u, depth);
-      LoopMaintenanceLemma2(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      LoopMaintenanceHelperLemma(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
 
       if i == |u.children| - 1
       {
@@ -349,7 +348,7 @@ abstract module NegamaxDepthPlaat1996Module
       reveal partial_negamax();
       var u' := replace_child(u, i, v');
       ExpansionReplaceChildLemma(u, u', v, v', i, depth);
-      LoopMaintenanceLemma2(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      LoopMaintenanceHelperLemma(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
       if i == |u.children| - 1
       {
         PartialNegamaxAlphaBetaLemma(value, u', i + 1, alpha0, beta0);
