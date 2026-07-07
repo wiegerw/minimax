@@ -16,7 +16,7 @@ abstract module MinimaxKnuth1975Module
   import opened Definitions
   import opened Lemmas
 
-  class MinimaxABKnuth1975Algorithm
+  class MinimaxKnuth1975Algorithm
   {
     // Minimax with alpha-beta pruning: prunes branches that cannot affect result
     method Minimax(u: Node, alpha: bounded_int, beta: bounded_int) returns (result: bounded_int)
@@ -120,7 +120,7 @@ abstract module MinimaxKnuth1975Module
 } // MinimaxKnuth1975Module
 
 // Based on Fishburn 1983 (fail-soft)
-abstract module MinimaxABFishburn1983Module
+abstract module MinimaxFishburn1983Module
 {
   import opened Definitions
   import opened Lemmas
@@ -231,12 +231,12 @@ abstract module MinimaxABFishburn1983Module
 } // MinimaxFishburn1983Module
 
 // Based on Wikipedia 2025
-abstract module MinimaxABWiki2025Module
+abstract module MinimaxWikipedia2025Module
 {
   import opened Definitions
   import opened Lemmas
 
-  class MinimaxABWiki2025Algorithm
+  class MinimaxWikipedia2025Algorithm
   {
     // Minimax with enhanced fail-soft alpha-beta pruning: dynamically adjusts window bounds
     method Minimax(u: Node, alpha0: bounded_int, beta0: bounded_int) returns (result: bounded_int)
@@ -360,4 +360,4 @@ abstract module MinimaxABWiki2025Module
     }
   }
 
-} // MinimaxABWiki2025Module
+} // MinimaxWikipedia2025Module

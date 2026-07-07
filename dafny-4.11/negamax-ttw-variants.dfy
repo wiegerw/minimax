@@ -245,7 +245,7 @@ abstract module NegamaxTTWCurrentAlphaModule
   // The Wikipedia 2025 version of negamax with a transposition table with
   // one modification: the table update is done using the current value of alpha
   // instead of the original value.
-  class NegamaxTTWCurrentAlpha
+  class NegamaxTTWCurrentAlphaAlgorithm
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
 
@@ -727,7 +727,7 @@ abstract module NegamaxTTWExtraDepthConditionModule
     var u': Node :| is_expansion(u', u, depth) && is_negamax_ab_result(value, u', alpha0, beta0);
   }
 
-  class NegamaxTTWExtraDepthCondition
+  class NegamaxTTWExtraDepthConditionAlgorithm
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
 
@@ -1191,7 +1191,7 @@ abstract module NegamaxTTWFishburnPropagationModule
     var u': Node :| is_expansion(u', u, depth) && is_negamax_ab_result(value, u', alpha0, beta0);
   }
 
-  class NegamaxTTWFishburnPropagation
+  class NegamaxTTWFishburnPropagationAlgorithm
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
 

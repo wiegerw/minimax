@@ -13,7 +13,7 @@ include "lemmas.dfy"
 abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
 {
   // The Wikipedia 2025 version of negamax with a transposition table
-  class NegamaxTTW
+  class NegamaxTTWAlgorithm
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
 

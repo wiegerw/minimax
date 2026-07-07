@@ -15,7 +15,7 @@ abstract module MinimaxModule
   import opened Definitions
   import opened Lemmas
 
-  class Minimax
+  class MinimaxAlgorithm
   {
     // Standard minimax algorithm: explores entire game tree
     method Minimax(u: Node) returns (result: bounded_int)

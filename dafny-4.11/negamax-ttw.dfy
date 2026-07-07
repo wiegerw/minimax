@@ -242,7 +242,7 @@ abstract module NegamaxTTWModule
     var u': Node :| is_expansion(u', u, depth) && is_negamax_ab_result(value, u', alpha0, beta0);
   }
 
-  class NegamaxTTW
+  class NegamaxTTWAlgorithm
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
 

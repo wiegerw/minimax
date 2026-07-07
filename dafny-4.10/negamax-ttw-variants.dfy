@@ -11,7 +11,7 @@ include "negamax-ttw.dfy"
 // Change 1: Use the current alpha instead of the original alpha for table updates
 abstract module NegamaxTTWCurrentAlphaModule refines NegamaxTTWModule
 {
-  class NegamaxTTWCurrentAlpha
+  class NegamaxTTWCurrentAlphaAlgorithm
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
 
@@ -96,7 +96,7 @@ abstract module NegamaxTTWCurrentAlphaModule refines NegamaxTTWModule
 // Change 2: Put an extra condition on the table updates
 abstract module NegamaxTTWExtraDepthConditionModule refines NegamaxTTWModule
 {
-  class NegamaxTTWExtraDepthCondition
+  class NegamaxTTWExtraDepthConditionAlgorithm
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
 
@@ -164,7 +164,7 @@ abstract module NegamaxTTWExtraDepthConditionModule refines NegamaxTTWModule
 // Change 3: Use the Fishburn propagation variant of alpha-beta
 abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModule
 {
-  class NegamaxTTWFishburnPropagation
+  class NegamaxTTWFishburnPropagationAlgorithm
   {
     var T: TranspositionTable  // Memoization table for previously computed positions
 

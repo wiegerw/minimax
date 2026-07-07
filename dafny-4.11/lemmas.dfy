@@ -104,6 +104,74 @@ abstract module Lemmas
     }
   }
 
+  lemma ApplyNegamaxLemma(v: seq<Node>, i: nat)
+    requires 0 <= i < |v|
+    ensures apply_negamax(v[..i+1]) == apply_negamax(v[..i]) + [negamax(v[i])]
+  {}
+
+  lemma NegamaxMinMaxLemma(u: Node, i: nat)
+    requires 0 <= i < |u.children|
+    requires partial_negamax(u, i) == -minimum'(apply_negamax(u.children[..i]))
+    ensures partial_negamax(u, i + 1) == max(partial_negamax(u, i), -negamax(u.children[i]))
+  {
+    reveal partial_negamax();
+    ApplyNegamaxLemma(u.children, i);
+    var v := u.children[i];
+    calc
+    {
+      partial_negamax(u, i+1);
+      ==
+      -minimum'(apply_negamax(u.children[..i+1]));
+      ==
+      -minimum'(apply_negamax(u.children[..i]) + [negamax(u.children[i])]);
+      ==
+      -minimum'(apply_negamax(u.children[..i]) + [negamax(v)]);
+      ==
+      -min(minimum'(apply_negamax(u.children[..i])), negamax(v));
+      ==
+      max(partial_negamax(u, i), -negamax(v));
+    }
+  }
+
+  lemma ApplyMinimaxLemma(v: seq<Node>, i: nat)
+    requires 0 <= i < |v|
+    ensures apply_minimax(v[..i+1]) == apply_minimax(v[..i]) + [minimax(v[i])]
+  {}
+
+  lemma MinimaxMinMaxLemma(u: Node, i: nat)
+    requires 0 <= i < |u.children|
+    ensures u.color == Black ==> partial_minimax(u, i + 1) == min(partial_minimax(u, i), minimax(u.children[i]))
+    ensures u.color == White ==> partial_minimax(u, i + 1) == max(partial_minimax(u, i), minimax(u.children[i]))
+  {
+    ApplyMinimaxLemma(u.children, i);
+    var v := u.children[i];
+    if u.color == Black {
+      calc {
+        partial_minimax(u, i+1);
+        ==
+        minimum'(apply_minimax(u.children[..i+1]));
+        ==
+        minimum'(apply_minimax(u.children[..i]) + [minimax(v)]);
+        ==
+        min(minimum'(apply_minimax(u.children[..i])), minimax(v));
+        ==
+        min(partial_minimax(u, i), minimax(v));
+      }
+    } else {
+      calc {
+        partial_minimax(u, i+1);
+        ==
+        maximum'(apply_minimax(u.children[..i+1]));
+        ==
+        maximum'(apply_minimax(u.children[..i]) + [minimax(v)]);
+        ==
+        max(maximum'(apply_minimax(u.children[..i])), minimax(v));
+        ==
+        max(partial_minimax(u, i), minimax(v));
+      }
+    }
+  }
+
   // Proves properties of depth truncation: preserves child count and recursive structure
   lemma TruncateLemma(u: Node, i: nat, depth: nat)
     requires 0 <= i < |u.children|
@@ -111,6 +179,16 @@ abstract module Lemmas
     ensures |truncate_at_depth(u, depth).children| == |u.children|
     ensures truncate_at_depth(u, depth).children[i] == truncate_at_depth(u.children[i], depth - 1)
   { 
+  }
+
+  // Proves that partial minimax alpha-beta result over all children equals full result
+  lemma PartialMinimaxAlphaBetaLemma(value: bounded_int, u: Node, i: nat, alpha: bounded_int, beta: bounded_int)
+    requires i == |u.children| > 0
+    requires is_partial_minimax_ab_result(value, u, i, alpha, beta)
+    ensures is_minimax_ab_result(value, u, alpha, beta)
+  {
+    reveal is_minimax_ab_result();
+    PartialMinimaxLemma(u);
   }
 
   // Proves that partial negamax alpha-beta result over all children equals full result
