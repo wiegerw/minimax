@@ -332,13 +332,6 @@ abstract module NegamaxWikipedia2025NonStrictModule
     }
   }
 
-  lemma NoChildrenReturnLemma(u: Node, alpha0: bounded_int, beta0: bounded_int)
-    requires |u.children| == 0 
-    ensures is_negamax_ab_result(color(u) * u.eval, u, alpha0, beta0)
-  {
-    reveal is_negamax_ab_result();
-  }
-
   lemma LoopEntryLemma(u: Node, alpha0: bounded_int, beta0: bounded_int, alpha: bounded_int, value: bounded_int)
     requires value == -INFINITY
     requires alpha == alpha0 <= beta0

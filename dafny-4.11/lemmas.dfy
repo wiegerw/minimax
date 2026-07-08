@@ -202,6 +202,14 @@ abstract module Lemmas
     PartialNegamaxLemma(u);
   }
 
+  // Proves the alpha-beta result for a leaf node (negamax base case)
+  lemma NoChildrenReturnLemma(u: Node, alpha0: bounded_int, beta0: bounded_int)
+    requires |u.children| == 0
+    ensures is_negamax_ab_result(color(u) * u.eval, u, alpha0, beta0)
+  {
+    reveal is_negamax_ab_result();
+  }
+
   // Proves that every node is a subtree of itself (reflexivity)
   lemma SubtreeReflexivityLemma(u: Node)
     ensures is_partial_subtree(u, u)

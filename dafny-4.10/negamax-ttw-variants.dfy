@@ -232,7 +232,7 @@ abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModu
     }
   }
 
-  lemma LoopBreakLemma2(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat, alpha: bounded_int, beta: bounded_int, old_alpha: bounded_int, old_value: bounded_int, value: bounded_int, negamax_v: bounded_int)
+  lemma LoopBreakHelperLemma(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat, alpha: bounded_int, beta: bounded_int, old_alpha: bounded_int, old_value: bounded_int, value: bounded_int, negamax_v: bounded_int)
     requires turn_based()
     requires 0 <= i < |u.children|
     requires |u.children| == |u'.children|
@@ -278,7 +278,7 @@ abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModu
       var u'' := replace_child(u', i, v');
       assert is_expansion(u'', u, depth);
 
-      LoopBreakLemma2(u', u'', v, v', i, depth, alpha, beta, old_alpha, old_value, value, negamax_v);
+      LoopBreakHelperLemma(u', u'', v, v', i, depth, alpha, beta, old_alpha, old_value, value, negamax_v);
       assert is_negamax_ab_result(value, u'', alpha, beta);
     }
     else
@@ -286,7 +286,7 @@ abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModu
       reveal partial_negamax();
       var u' := replace_child(u, i, v');
 
-      LoopBreakLemma2(u, u', v, v', i, depth, alpha, beta, old_alpha, old_value, value, negamax_v);
+      LoopBreakHelperLemma(u, u', v, v', i, depth, alpha, beta, old_alpha, old_value, value, negamax_v);
       assert is_negamax_ab_result(value, u', alpha, beta);
 
       ExpansionReplaceChildLemma(u, u', v, v', i, depth);
@@ -296,7 +296,7 @@ abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModu
     }
   }
 
-  lemma LoopMaintenanceLemma2(u': Node, u'': Node, v: Node, v': Node, i: nat, depth: nat, alpha: bounded_int, beta: bounded_int, old_alpha: bounded_int, old_value: bounded_int, value: bounded_int, negamax_v: bounded_int)
+  lemma LoopMaintenanceHelperLemma(u': Node, u'': Node, v: Node, v': Node, i: nat, depth: nat, alpha: bounded_int, beta: bounded_int, old_alpha: bounded_int, old_value: bounded_int, value: bounded_int, negamax_v: bounded_int)
     requires 0 <= i < |u'.children|
     requires |u'.children| == |u''.children|
     requires u'' == replace_child(u', i, v')
@@ -353,7 +353,7 @@ abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModu
       var u'' := replace_child(u', i, v');
       assert is_expansion(u'', u, depth);
 
-      LoopMaintenanceLemma2(u', u'', v, v', i, depth, alpha, beta, old_alpha, old_value, value, negamax_v);
+      LoopMaintenanceHelperLemma(u', u'', v, v', i, depth, alpha, beta, old_alpha, old_value, value, negamax_v);
 
       if i == |u.children| - 1
       {
@@ -369,7 +369,7 @@ abstract module NegamaxTTWFishburnPropagationModule refines NegamaxTTWCommonModu
       ExpansionReplaceChildLemma(u, u', v, v', i, depth);
       assert is_expansion(u', u, depth);
 
-      LoopMaintenanceLemma2(u, u', v, v', i, depth, alpha, beta, old_alpha, old_value, value, negamax_v);
+      LoopMaintenanceHelperLemma(u, u', v, v', i, depth, alpha, beta, old_alpha, old_value, value, negamax_v);
       if i == |u.children| - 1
       {
         assert is_partial_negamax_ab_result(value, u', i + 1, alpha, beta);

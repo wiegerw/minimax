@@ -6,6 +6,7 @@
 
 include "definitions.dfy"
 include "lemmas.dfy"
+include "negamax-ttw.dfy"
 
 // Implementation of the MT-SSS* / minimax-Plaat algorithm from the paper
 // "Best-first Fixed-depth Minimax algorithms" by Plaat et al. (1996).
@@ -99,7 +100,7 @@ abstract module MinimaxTTPModule
 
       if |u.children| == 0
       {
-        NoChildrenReturnLemma(u, alpha0, beta0);
+        MinimaxNoChildrenReturnLemma(u, alpha0, beta0);
         result := u.eval;
       }
       else if u.color == Black
@@ -178,7 +179,7 @@ abstract module MinimaxTTPModule
     }
   }
 
-  lemma NoChildrenReturnLemma(u: Node, alpha0: bounded_int, beta0: bounded_int)
+  lemma MinimaxNoChildrenReturnLemma(u: Node, alpha0: bounded_int, beta0: bounded_int)
     requires |u.children| == 0
     ensures is_minimax_ab_result(u.eval, u, alpha0, beta0)
   {
@@ -279,72 +280,7 @@ abstract module MinimaxDepthTTPModule
 {
   import opened Definitions
   import opened Lemmas
-
-  // This models an all or nothing expansion. We have that u' is an expansion of truncate_at_depth(u, depth),
-  // such that nodes at distance greater than depth to the root u have either all children included or none.
-  predicate is_expansion(u': Node, u: Node, depth: nat)
-  {
-    var v := u.children;
-    var v' := u'.children;
-
-    u.eval == u'.eval &&
-    u.color == u'.color &&
-    if depth > 0
-    then
-      |v| == |v'| && forall i | 0 <= i < |v| :: is_expansion(v'[i], v[i], depth - 1)
-    else
-      |v'| == 0 ||
-      (
-        |v| == |v'| && forall i | 0 <= i < |v| :: is_expansion(v'[i], v[i], 0)
-      )
-  }
-
-  // The is_expansion relation must be reflexive
-  lemma ExpansionReflexivityLemma(u: Node, depth: nat)
-    ensures is_expansion(u, u, depth)
-  {
-  }
-
-  // The is_expansion relation must be transitive
-  lemma ExpansionTransitivityLemma(u: Node, v: Node, w: Node, depth: nat)
-    requires is_expansion(u, v, depth)
-    requires is_expansion(v, w, depth)
-    ensures is_expansion(u, w, depth)
-  {
-  }
-
-  // The depth of an expansion can be lowered
-  lemma ExpansionDecreaseDepthLemma(u': Node, u: Node, depth: nat)
-      requires is_expansion(u', u, depth)
-      ensures forall d | 0 <= d <= depth :: is_expansion(u', u, d)
-  {
-  }
-
-  // Replacing a child v with an expansion v' preserves being an expansion
-  lemma ExpansionReplaceChildLemma(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat)
-    requires depth > 0
-    requires 0 <= i < |u.children|
-    requires v == u.children[i]
-    requires is_expansion(v', v, depth - 1)
-    requires u' == replace_child(u, i, v')
-    ensures is_expansion(u', u, depth)
-  {
-    var v := u.children;
-    var v' := u'.children;
-
-    forall j | 0 <= j < |u.children| ensures is_expansion(v'[j], v[j], depth - 1)
-    {
-      if j == i
-      {
-      }
-      else
-      {
-        assert v'[j] == v[j];
-        ExpansionReflexivityLemma(v[j], depth - 1);
-        assert is_expansion(v'[j], v[j], depth - 1);
-      }
-    }
-  }
+  import opened ExpansionModule
 
   ghost predicate is_minimax_tt_result(value: bounded_int, u: Node, alpha: bounded_int, beta: bounded_int, depth: nat)
   {
@@ -911,13 +847,6 @@ abstract module NegamaxTTPModule
     }
   }
 
-  lemma NoChildrenReturnLemma(u: Node, alpha0: bounded_int, beta0: bounded_int)
-    requires |u.children| == 0
-    ensures is_negamax_ab_result(color(u) * u.eval, u, alpha0, beta0)
-  {
-    reveal is_negamax_ab_result();
-  }
-
   lemma LoopBreakLemma(u: Node, v: Node, i: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
     requires turn_based()
     requires 0 <= i < |u.children|
@@ -972,72 +901,7 @@ abstract module NegamaxDepthTTPModule
 {
   import opened Definitions
   import opened Lemmas
-
-  // This models an all or nothing expansion. We have that u' is an expansion of truncate_at_depth(u, depth),
-  // such that nodes at distance greater than depth to the root u have either all children included or none.
-  predicate is_expansion(u': Node, u: Node, depth: nat)
-  {
-    var v := u.children;
-    var v' := u'.children;
-
-    u.eval == u'.eval &&
-    u.color == u'.color &&
-    if depth > 0
-    then
-      |v| == |v'| && forall i | 0 <= i < |v| :: is_expansion(v'[i], v[i], depth - 1)
-    else
-      |v'| == 0 ||
-      (
-        |v| == |v'| && forall i | 0 <= i < |v| :: is_expansion(v'[i], v[i], 0)
-      )
-  }
-
-  // The is_expansion relation must be reflexive
-  lemma ExpansionReflexivityLemma(u: Node, depth: nat)
-    ensures is_expansion(u, u, depth)
-  {
-  }
-
-  // The is_expansion relation must be transitive
-  lemma ExpansionTransitivityLemma(u: Node, v: Node, w: Node, depth: nat)
-    requires is_expansion(u, v, depth)
-    requires is_expansion(v, w, depth)
-    ensures is_expansion(u, w, depth)
-  {
-  }
-
-  // The depth of an expansion can be lowered
-  lemma ExpansionDecreaseDepthLemma(u': Node, u: Node, depth: nat)
-      requires is_expansion(u', u, depth)
-      ensures forall d | 0 <= d <= depth :: is_expansion(u', u, d)
-  {
-  }
-
-  // Replacing a child v with an expansion v' preserves being an expansion
-  lemma ExpansionReplaceChildLemma(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat)
-    requires depth > 0
-    requires 0 <= i < |u.children|
-    requires v == u.children[i]
-    requires is_expansion(v', v, depth - 1)
-    requires u' == replace_child(u, i, v')
-    ensures is_expansion(u', u, depth)
-  {
-    var v := u.children;
-    var v' := u'.children;
-
-    forall j | 0 <= j < |u.children| ensures is_expansion(v'[j], v[j], depth - 1)
-    {
-      if j == i
-      {
-      }
-      else
-      {
-        assert v'[j] == v[j];
-        ExpansionReflexivityLemma(v[j], depth - 1);
-        assert is_expansion(v'[j], v[j], depth - 1);
-      }
-    }
-  }
+  import opened ExpansionModule
 
   ghost predicate is_negamax_tt_result(value: bounded_int, u: Node, alpha: bounded_int, beta: bounded_int, depth: nat)
   {

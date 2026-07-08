@@ -74,7 +74,7 @@ abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
     }
   }
 
-  lemma LoopBreakLemma2(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
+  lemma LoopBreakHelperLemma(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
     requires turn_based()
     requires 0 <= i < |u.children|
     requires |u.children| == |u'.children|
@@ -127,7 +127,7 @@ abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
       var u'' := replace_child(u', i, v');
       assert is_expansion(u'', u, depth);
 
-      LoopBreakLemma2(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      LoopBreakHelperLemma(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
       assert is_negamax_ab_result(value, u'', alpha0, beta0);
     }
     else
@@ -135,7 +135,7 @@ abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
       reveal partial_negamax();
       var u' := replace_child(u, i, v');
 
-      LoopBreakLemma2(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      LoopBreakHelperLemma(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
       assert is_negamax_ab_result(value, u', alpha0, beta0);
 
       ExpansionReplaceChildLemma(u, u', v, v', i, depth);
@@ -145,7 +145,7 @@ abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
     }
   }
 
-  lemma LoopMaintenanceLemma2(u': Node, u'': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
+  lemma LoopMaintenanceHelperLemma(u': Node, u'': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
     requires 0 <= i < |u'.children|
     requires |u'.children| == |u''.children|
     requires u'' == replace_child(u', i, v')
@@ -214,7 +214,7 @@ abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
       var u'' := replace_child(u', i, v');
       assert is_expansion(u'', u, depth);
 
-      LoopMaintenanceLemma2(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      LoopMaintenanceHelperLemma(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
 
       if i == |u.children| - 1
       {
@@ -230,7 +230,7 @@ abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
       ExpansionReplaceChildLemma(u, u', v, v', i, depth);
       assert is_expansion(u', u, depth);
 
-      LoopMaintenanceLemma2(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      LoopMaintenanceHelperLemma(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
       if i == |u.children| - 1
       {
         assert is_partial_negamax_ab_result(value, u', i + 1, alpha0, beta0);
@@ -242,11 +242,12 @@ abstract module NegamaxTTWModule refines NegamaxTTWCommonModule
 
 } // module NegamaxTTWModule
 
-// This module contains common functionality for the NegamaxTTW variations
-abstract module NegamaxTTWCommonModule
+// Shared "is_expansion" infrastructure, reused (via `import opened`) by both
+// the TTW and TTP transposition-table module families, so it doesn't need
+// to be duplicated across negamax-ttw.dfy and negamax-ttp.dfy.
+abstract module ExpansionModule
 {
   import opened Definitions
-  import opened Lemmas
 
   // This models an all or nothing expansion. We have that u' is an expansion of truncate_at_depth(u, depth),
   // such that nodes at distance greater than depth to the root u have either all children included or none.
@@ -255,7 +256,7 @@ abstract module NegamaxTTWCommonModule
     var v := u.children;
     var v' := u'.children;
 
-    u.eval == u'.eval && 
+    u.eval == u'.eval &&
     u.color == u'.color &&
     if depth > 0
     then
@@ -266,6 +267,62 @@ abstract module NegamaxTTWCommonModule
         |v| == |v'| && forall i | 0 <= i < |v| :: is_expansion(v'[i], v[i], 0)
       )
   }
+
+  // The is_expansion relation must be reflexive
+  lemma ExpansionReflexivityLemma(u: Node, depth: nat)
+    ensures is_expansion(u, u, depth)
+  {
+  }
+
+  // The is_expansion relation must be transitive
+  lemma ExpansionTransitivityLemma(u: Node, v: Node, w: Node, depth: nat)
+    requires is_expansion(u, v, depth)
+    requires is_expansion(v, w, depth)
+    ensures is_expansion(u, w, depth)
+  {
+  }
+
+  // The depth of an expansion can be lowered
+  lemma ExpansionDecreaseDepthLemma(u': Node, u: Node, depth: nat)
+      requires is_expansion(u', u, depth)
+      ensures forall d | 0 <= d <= depth :: is_expansion(u', u, d)
+  {
+  }
+
+  // Replacing a child v with an expansion v' preserves being an expansion
+  lemma ExpansionReplaceChildLemma(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat)
+    requires depth > 0
+    requires 0 <= i < |u.children|
+    requires v == u.children[i]
+    requires is_expansion(v', v, depth - 1)
+    requires u' == replace_child(u, i, v')
+    ensures is_expansion(u', u, depth)
+  {
+    var v := u.children;
+    var v' := u'.children;
+
+    forall j | 0 <= j < |u.children| ensures is_expansion(v'[j], v[j], depth - 1)
+    {
+      if j == i
+      {
+      }
+      else
+      {
+        assert v'[j] == v[j];
+        ExpansionReflexivityLemma(v[j], depth - 1);
+        assert is_expansion(v'[j], v[j], depth - 1);
+      }
+    }
+  }
+
+} // module ExpansionModule
+
+// This module contains common functionality for the NegamaxTTW variations
+abstract module NegamaxTTWCommonModule
+{
+  import opened Definitions
+  import opened Lemmas
+  import opened ExpansionModule
 
   // An expansion must include the truncated tree
   lemma ExpansionInludesTruncatedTreeLemma(u': Node, u: Node, depth: nat)
@@ -304,53 +361,6 @@ abstract module NegamaxTTWCommonModule
       }
     }
   }
-
-  // The is_expansion relation must be reflexive
-  lemma ExpansionReflexivityLemma(u: Node, depth: nat)
-    ensures is_expansion(u, u, depth)
-  {
-  }
-
-  // The is_expansion relation must be transitive
-  lemma ExpansionTransitivityLemma(u: Node, v: Node, w: Node, depth: nat)
-    requires is_expansion(u, v, depth)
-    requires is_expansion(v, w, depth)
-    ensures is_expansion(u, w, depth)
-  {
-  }
-
-  // The depth of an expansion can be lowered
-  lemma ExpansionDecreaseDepthLemma(u': Node, u: Node, depth: nat)
-      requires is_expansion(u', u, depth)
-      ensures forall d | 0 <= d <= depth :: is_expansion(u', u, d)
-  {
-  }    
-
-  // Replacing a child v with an expansion v' preserves being an expansion
-  lemma ExpansionReplaceChildLemma(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat)
-    requires depth > 0
-    requires 0 <= i < |u.children|
-    requires v == u.children[i]
-    requires is_expansion(v', v, depth - 1)
-    requires u' == replace_child(u, i, v')
-    ensures is_expansion(u', u, depth)
-  {
-    var v := u.children;
-    var v' := u'.children;
-
-    forall j | 0 <= j < |u.children| ensures is_expansion(v'[j], v[j], depth - 1)
-    {
-      if j == i
-      {
-      }
-      else
-      {
-        assert v'[j] == v[j];
-        ExpansionReflexivityLemma(v[j], depth - 1);
-        assert is_expansion(v'[j], v[j], depth - 1);
-      }
-    }
-  }  
 
   ghost predicate is_negamax_tt_result(value: bounded_int, u: Node, alpha: bounded_int, beta: bounded_int, depth: nat)
   {

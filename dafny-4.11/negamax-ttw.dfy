@@ -10,10 +10,12 @@ include "lemmas.dfy"
 // Negamax with transposition table for memoization and enhanced pruning
 // https://en.wikipedia.org/wiki/Negamax
 
-abstract module NegamaxTTWModule
+// Shared "is_expansion" infrastructure, reused (via `import opened`) by both
+// the TTW and TTP transposition-table module families, so it doesn't need
+// to be duplicated across negamax-ttw.dfy and negamax-ttp.dfy.
+abstract module ExpansionModule
 {
   import opened Definitions
-  import opened Lemmas
 
   // This models an all or nothing expansion. We have that u' is an expansion of truncate_at_depth(u, depth),
   // such that nodes at distance greater than depth to the root u have either all children included or none.
@@ -22,7 +24,7 @@ abstract module NegamaxTTWModule
     var v := u.children;
     var v' := u'.children;
 
-    u.eval == u'.eval && 
+    u.eval == u'.eval &&
     u.color == u'.color &&
     if depth > 0
     then
@@ -33,6 +35,62 @@ abstract module NegamaxTTWModule
         |v| == |v'| && forall i | 0 <= i < |v| :: is_expansion(v'[i], v[i], 0)
       )
   }
+
+  // The is_expansion relation must be reflexive
+  lemma ExpansionReflexivityLemma(u: Node, depth: nat)
+    ensures is_expansion(u, u, depth)
+  {
+  }
+
+  // The is_expansion relation must be transitive
+  lemma ExpansionTransitivityLemma(u: Node, v: Node, w: Node, depth: nat)
+    requires is_expansion(u, v, depth)
+    requires is_expansion(v, w, depth)
+    ensures is_expansion(u, w, depth)
+  {
+  }
+
+  // The depth of an expansion can be lowered
+  lemma ExpansionDecreaseDepthLemma(u': Node, u: Node, depth: nat)
+      requires is_expansion(u', u, depth)
+      ensures forall d | 0 <= d <= depth :: is_expansion(u', u, d)
+  {
+  }
+
+  // Replacing a child v with an expansion v' preserves being an expansion
+  lemma ExpansionReplaceChildLemma(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat)
+    requires depth > 0
+    requires 0 <= i < |u.children|
+    requires v == u.children[i]
+    requires is_expansion(v', v, depth - 1)
+    requires u' == replace_child(u, i, v')
+    ensures is_expansion(u', u, depth)
+  {
+    var v := u.children;
+    var v' := u'.children;
+
+    forall j | 0 <= j < |u.children| ensures is_expansion(v'[j], v[j], depth - 1)
+    {
+      if j == i
+      {
+      }
+      else
+      {
+        assert v'[j] == v[j];
+        ExpansionReflexivityLemma(v[j], depth - 1);
+        assert is_expansion(v'[j], v[j], depth - 1);
+      }
+    }
+  }
+
+} // module ExpansionModule
+
+// Shared NegamaxTTW infrastructure.
+abstract module NegamaxTTWCoreModule
+{
+  import opened Definitions
+  import opened Lemmas
+  import opened ExpansionModule
 
   // An expansion must include the truncated tree
   lemma ExpansionInludesTruncatedTreeLemma(u': Node, u: Node, depth: nat)
@@ -71,53 +129,6 @@ abstract module NegamaxTTWModule
       }
     }
   }
-
-  // The is_expansion relation must be reflexive
-  lemma ExpansionReflexivityLemma(u: Node, depth: nat)
-    ensures is_expansion(u, u, depth)
-  {
-  }
-
-  // The is_expansion relation must be transitive
-  lemma ExpansionTransitivityLemma(u: Node, v: Node, w: Node, depth: nat)
-    requires is_expansion(u, v, depth)
-    requires is_expansion(v, w, depth)
-    ensures is_expansion(u, w, depth)
-  {
-  }
-
-  // The depth of an expansion can be lowered
-  lemma ExpansionDecreaseDepthLemma(u': Node, u: Node, depth: nat)
-      requires is_expansion(u', u, depth)
-      ensures forall d | 0 <= d <= depth :: is_expansion(u', u, d)
-  {
-  }    
-
-  // Replacing a child v with an expansion v' preserves being an expansion
-  lemma ExpansionReplaceChildLemma(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat)
-    requires depth > 0
-    requires 0 <= i < |u.children|
-    requires v == u.children[i]
-    requires is_expansion(v', v, depth - 1)
-    requires u' == replace_child(u, i, v')
-    ensures is_expansion(u', u, depth)
-  {
-    var v := u.children;
-    var v' := u'.children;
-
-    forall j | 0 <= j < |u.children| ensures is_expansion(v'[j], v[j], depth - 1)
-    {
-      if j == i
-      {
-      }
-      else
-      {
-        assert v'[j] == v[j];
-        ExpansionReflexivityLemma(v[j], depth - 1);
-        assert is_expansion(v'[j], v[j], depth - 1);
-      }
-    }
-  }  
 
   ghost predicate is_negamax_tt_result(value: bounded_int, u: Node, alpha: bounded_int, beta: bounded_int, depth: nat)
   {
@@ -169,7 +180,7 @@ abstract module NegamaxTTWModule
   {
     reveal is_negamax_ab_result();
     assert is_valid_table_entry(t, u);
-    if t.flag == Exact 
+    if t.flag == Exact
     {
       var u': Node :| is_expansion(u', u, t.depth) && t.value == negamax(u');
       ExpansionDecreaseDepthLemma(u', u, t.depth);
@@ -201,35 +212,6 @@ abstract module NegamaxTTWModule
     assert is_negamax_tt_result(color(u) * u.eval, u', alpha0, beta0, 0);
   }
 
-  lemma ApplyNegamaxLemma(v: seq<Node>, i: nat)
-    requires 0 <= i < |v|
-    ensures apply_negamax(v[..i+1]) == apply_negamax(v[..i]) + [negamax(v[i])]
-  {}    
-
-  lemma NegamaxMinMaxLemma(u: Node, i: nat)
-    requires 0 <= i < |u.children|
-    requires partial_negamax(u, i) == -minimum'(apply_negamax(u.children[..i]))
-    ensures partial_negamax(u, i + 1) == max(partial_negamax(u, i), -negamax(u.children[i]))
-  {
-    reveal partial_negamax();
-    ApplyNegamaxLemma(u.children, i);
-    var v := u.children[i];
-    calc
-    {
-      partial_negamax(u, i+1);
-      ==
-      -minimum'(apply_negamax(u.children[..i+1]));
-      ==
-      -minimum'(apply_negamax(u.children[..i]) + [negamax(u.children[i])]);
-      ==
-      -minimum'(apply_negamax(u.children[..i]) + [negamax(v)]);
-      ==
-      -min(minimum'(apply_negamax(u.children[..i])), negamax(v));
-      ==
-      max(partial_negamax(u, i), -negamax(v));
-    }
-  }
-
   lemma TableUpdateLemma(value: bounded_int, u: Node, alpha0: bounded_int, beta0: bounded_int, depth: nat, T: TranspositionTable)
     requires alpha0 < beta0
     requires is_valid_table(T)
@@ -241,6 +223,192 @@ abstract module NegamaxTTWModule
     reveal is_negamax_ab_result();
     var u': Node :| is_expansion(u', u, depth) && is_negamax_ab_result(value, u', alpha0, beta0);
   }
+
+} // module NegamaxTTWCoreModule
+
+// Shared lemmas related to loops.
+abstract module NegamaxTTWLoopModule
+{
+  import opened Definitions
+  import opened Lemmas
+  import opened ExpansionModule
+  import opened NegamaxTTWCoreModule
+
+  lemma LoopBreakHelperLemma(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
+    requires turn_based()
+    requires 0 <= i < |u.children|
+    requires |u.children| == |u'.children|
+    requires u' == replace_child(u, i, v')
+    requires alpha >= beta0
+    requires alpha0 <= old_alpha < beta0
+    requires value == max(old_value, -negamax_v)
+    requires alpha == max(old_alpha, value)
+    requires is_negamax_ab_result(negamax_v, v', -beta0, -old_alpha)
+    requires is_partial_negamax_ab_result(old_value, u, i, alpha0, beta0)
+    ensures is_negamax_ab_result(value, u', alpha0, beta0)
+  {
+    reveal is_negamax_ab_result();
+    reveal partial_negamax();
+
+    NegamaxMinMaxLemma(u', i);
+    assert partial_negamax(u', i + 1) == max(partial_negamax(u', i), -negamax(v'));
+    assert partial_negamax(u', i + 1) >= beta0;
+    assert value >= beta0;
+    PartialNegamaxLemma(u');
+  }
+
+  lemma LoopBreakLemma(u: Node, v: Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
+    requires turn_based()
+    requires 0 <= i < |u.children|
+    requires depth > 0
+    requires v == u.children[i]
+    requires alpha >= beta0
+    requires alpha0 <= old_alpha < beta0
+    requires value == max(old_value, -negamax_v)
+    requires alpha == max(old_alpha, value)
+    requires is_negamax_tt_result(negamax_v, v, -beta0, -old_alpha, depth - 1)
+    requires i == 0 ==> old_value == -INFINITY && old_alpha == alpha0
+    requires i > 0 ==>
+      exists u': Node ::
+        is_expansion(u', u, depth) &&
+        is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0)
+    ensures is_negamax_tt_result(value, u, alpha0, beta0, depth)
+  {
+    var v': Node :|
+      is_expansion(v', v, depth - 1) &&
+      is_negamax_ab_result(negamax_v, v', -beta0, -old_alpha);
+
+    if i > 0
+    {
+      var u': Node :|
+        is_expansion(u', u, depth) &&
+        is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0);
+
+      var u'' := replace_child(u', i, v');
+      assert is_expansion(u'', u, depth);
+
+      LoopBreakHelperLemma(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      assert is_negamax_ab_result(value, u'', alpha0, beta0);
+    }
+    else
+    {
+      reveal partial_negamax();
+      var u' := replace_child(u, i, v');
+
+      LoopBreakHelperLemma(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      assert is_negamax_ab_result(value, u', alpha0, beta0);
+
+      ExpansionReplaceChildLemma(u, u', v, v', i, depth);
+      assert is_expansion(u', u, depth);
+
+      assert is_negamax_ab_result(value, u', alpha0, beta0);
+    }
+  }
+
+  lemma LoopMaintenanceHelperLemma(u': Node, u'': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
+    requires 0 <= i < |u'.children|
+    requires |u'.children| == |u''.children|
+    requires u'' == replace_child(u', i, v')
+    requires alpha < beta0
+    requires old_value <= alpha0 ==> old_alpha == alpha0
+    requires alpha0 <= old_alpha < beta0
+    requires alpha0 < old_value < beta0 ==> old_alpha == old_value
+    requires value == max(old_value, -negamax_v)
+    requires alpha == max(old_alpha, value)
+    requires is_negamax_ab_result(negamax_v, v', -beta0, -old_alpha)
+    requires is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0)
+    ensures is_partial_negamax_ab_result(value, u'', i + 1, alpha0, beta0)
+  {
+    reveal is_negamax_ab_result();
+    reveal partial_negamax();
+
+    assert negamax(v') <= -beta0 <==> negamax_v <= -beta0;
+    assert -beta0 < negamax(v') < -old_alpha <==> -beta0 < negamax_v == negamax(v') < -old_alpha;
+    assert negamax(v') >= -old_alpha <==> negamax_v >= -old_alpha;
+    assert value == max(old_value, -negamax_v);
+    assert alpha == max(old_alpha, value);
+    NegamaxMinMaxLemma(u'', i);
+    assert partial_negamax(u'', i + 1) == max(partial_negamax(u'', i), -negamax(u''.children[i]));
+    assert partial_negamax(u'', i + 1) == max(partial_negamax(u'', i), -negamax(v'));
+    assert partial_negamax(u'', i + 1) < beta0;
+    assert value < beta0;
+  }
+
+  lemma LoopMaintenanceLemma(u: Node, v: Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
+    requires turn_based()
+    requires 0 <= i < |u.children|
+    requires depth > 0
+    requires v == u.children[i]
+    requires alpha0 <= old_alpha < beta0
+    requires old_value <= alpha0 ==> old_alpha == alpha0
+    requires alpha < beta0
+    requires alpha0 < old_value < beta0 ==> old_alpha == old_value
+    requires value == max(old_value, -negamax_v)
+    requires alpha == max(old_alpha, value)
+    requires is_negamax_tt_result(negamax_v, v, -beta0, -old_alpha, depth - 1)
+    requires i == 0 ==> old_value == -INFINITY && old_alpha == alpha0
+    requires i > 0 ==>
+      exists u': Node ::
+        is_expansion(u', u, depth) &&
+        is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0)
+
+    ensures
+      exists u': Node ::
+        is_expansion(u', u, depth) &&
+        is_partial_negamax_ab_result(value, u', i + 1, alpha0, beta0)
+
+    ensures i == |u.children| - 1 ==> is_negamax_tt_result(value, u, alpha0, beta0, depth)
+  {
+    reveal is_negamax_ab_result();
+
+    var v': Node :|
+      is_expansion(v', v, depth - 1) &&
+      is_negamax_ab_result(negamax_v, v', -beta0, -old_alpha);
+
+    if i > 0
+    {
+      var u': Node :|
+        is_expansion(u', u, depth) &&
+        is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0);
+
+      var u'' := replace_child(u', i, v');
+      assert is_expansion(u'', u, depth);
+
+      LoopMaintenanceHelperLemma(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+
+      if i == |u.children| - 1
+      {
+        assert is_partial_negamax_ab_result(value, u'', i + 1, alpha0, beta0);
+        PartialNegamaxAlphaBetaLemma(value, u'', i + 1, alpha0, beta0);
+        assert is_negamax_ab_result(value, u'', alpha0, beta0);
+      }
+    }
+    else
+    {
+      reveal partial_negamax();
+      var u' := replace_child(u, i, v');
+      ExpansionReplaceChildLemma(u, u', v, v', i, depth);
+      assert is_expansion(u', u, depth);
+
+      LoopMaintenanceHelperLemma(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
+      if i == |u.children| - 1
+      {
+        assert is_partial_negamax_ab_result(value, u', i + 1, alpha0, beta0);
+        PartialNegamaxAlphaBetaLemma(value, u', i + 1, alpha0, beta0);
+        assert is_negamax_ab_result(value, u', alpha0, beta0);
+      }
+    }
+  }
+
+} // module NegamaxTTWLoopModule
+
+abstract module NegamaxTTWModule
+{
+  import opened Definitions
+  import opened Lemmas
+  import opened ExpansionModule
+  import opened NegamaxTTWCoreModule
+  import opened NegamaxTTWLoopModule
 
   class NegamaxTTWAlgorithm
   {
@@ -301,172 +469,6 @@ abstract module NegamaxTTWModule
       else if alpha0 < value < beta0 {T:=T[u:=TableEntry_(depth,value,Exact)];}
       else if value >= beta0  {T := T[u:=TableEntry_(depth,value,Lowerbound)];}
       return value;
-    }
-  }
-
-  lemma LoopBreakLemma2(u: Node, u': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
-    requires turn_based()
-    requires 0 <= i < |u.children|
-    requires |u.children| == |u'.children|
-    requires u' == replace_child(u, i, v')
-    requires alpha >= beta0
-    requires alpha0 <= old_alpha < beta0
-    requires value == max(old_value, -negamax_v)
-    requires alpha == max(old_alpha, value)
-    requires is_negamax_ab_result(negamax_v, v', -beta0, -old_alpha)
-    requires is_partial_negamax_ab_result(old_value, u, i, alpha0, beta0)
-    ensures is_negamax_ab_result(value, u', alpha0, beta0)
-  {
-    reveal is_negamax_ab_result();
-    reveal partial_negamax();
-
-    NegamaxMinMaxLemma(u', i);
-    assert partial_negamax(u', i + 1) == max(partial_negamax(u', i), -negamax(v'));
-    assert partial_negamax(u', i + 1) >= beta0;
-    assert value >= beta0;
-    PartialNegamaxLemma(u');
-  }
-
-  lemma LoopBreakLemma(u: Node, v: Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
-    requires turn_based()
-    requires 0 <= i < |u.children|
-    requires depth > 0
-    requires v == u.children[i]
-    requires alpha >= beta0
-    requires alpha0 <= old_alpha < beta0
-    requires value == max(old_value, -negamax_v)
-    requires alpha == max(old_alpha, value)
-    requires is_negamax_tt_result(negamax_v, v, -beta0, -old_alpha, depth - 1)
-    requires i == 0 ==> old_value == -INFINITY && old_alpha == alpha0
-    requires i > 0 ==>
-      exists u': Node :: 
-        is_expansion(u', u, depth) &&
-        is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0)
-    ensures is_negamax_tt_result(value, u, alpha0, beta0, depth)
-  {
-    var v': Node :|
-      is_expansion(v', v, depth - 1) &&
-      is_negamax_ab_result(negamax_v, v', -beta0, -old_alpha);
-
-    if i > 0 
-    {
-      var u': Node :|
-        is_expansion(u', u, depth) &&
-        is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0);
-  
-      var u'' := replace_child(u', i, v');
-      assert is_expansion(u'', u, depth);
-
-      LoopBreakLemma2(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
-      assert is_negamax_ab_result(value, u'', alpha0, beta0);
-    }
-    else
-    {
-      reveal partial_negamax();
-      var u' := replace_child(u, i, v');
-
-      LoopBreakLemma2(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
-      assert is_negamax_ab_result(value, u', alpha0, beta0);
-
-      ExpansionReplaceChildLemma(u, u', v, v', i, depth);
-      assert is_expansion(u', u, depth);
-
-      assert is_negamax_ab_result(value, u', alpha0, beta0);
-    }
-  }
-
-  lemma LoopMaintenanceLemma2(u': Node, u'': Node, v: Node, v': Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
-    requires 0 <= i < |u'.children|
-    requires |u'.children| == |u''.children|
-    requires u'' == replace_child(u', i, v')
-    requires alpha < beta0
-    requires old_value <= alpha0 ==> old_alpha == alpha0
-    requires alpha0 <= old_alpha < beta0
-    requires alpha0 < old_value < beta0 ==> old_alpha == old_value
-    requires value == max(old_value, -negamax_v)
-    requires alpha == max(old_alpha, value)
-    requires is_negamax_ab_result(negamax_v, v', -beta0, -old_alpha)
-    requires is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0)
-    ensures is_partial_negamax_ab_result(value, u'', i + 1, alpha0, beta0)
-  {
-    reveal is_negamax_ab_result();
-    reveal partial_negamax();
-    
-    assert negamax(v') <= -beta0 <==> negamax_v <= -beta0;
-    assert -beta0 < negamax(v') < -old_alpha <==> -beta0 < negamax_v == negamax(v') < -old_alpha;
-    assert negamax(v') >= -old_alpha <==> negamax_v >= -old_alpha;
-    assert value == max(old_value, -negamax_v);
-    assert alpha == max(old_alpha, value);
-    NegamaxMinMaxLemma(u'', i);
-    assert partial_negamax(u'', i + 1) == max(partial_negamax(u'', i), -negamax(u''.children[i]));
-    assert partial_negamax(u'', i + 1) == max(partial_negamax(u'', i), -negamax(v'));
-    assert partial_negamax(u'', i + 1) < beta0;
-    assert value < beta0;
-  }
-
-  lemma LoopMaintenanceLemma(u: Node, v: Node, i: nat, depth: nat, alpha0: bounded_int, beta0: bounded_int, old_alpha: bounded_int, old_value: bounded_int, alpha: bounded_int, value: bounded_int, negamax_v: bounded_int)
-    requires turn_based()
-    requires 0 <= i < |u.children|
-    requires depth > 0
-    requires v == u.children[i]
-    requires alpha0 <= old_alpha < beta0
-    requires old_value <= alpha0 ==> old_alpha == alpha0
-    requires alpha < beta0
-    requires alpha0 < old_value < beta0 ==> old_alpha == old_value
-    requires value == max(old_value, -negamax_v)
-    requires alpha == max(old_alpha, value)
-    requires is_negamax_tt_result(negamax_v, v, -beta0, -old_alpha, depth - 1)
-    requires i == 0 ==> old_value == -INFINITY && old_alpha == alpha0
-    requires i > 0 ==>
-      exists u': Node :: 
-        is_expansion(u', u, depth) &&
-        is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0)
-
-    ensures
-      exists u': Node :: 
-        is_expansion(u', u, depth) &&
-        is_partial_negamax_ab_result(value, u', i + 1, alpha0, beta0)
-
-    ensures i == |u.children| - 1 ==> is_negamax_tt_result(value, u, alpha0, beta0, depth)
-  {
-    reveal is_negamax_ab_result();
-
-    var v': Node :|
-      is_expansion(v', v, depth - 1) &&
-      is_negamax_ab_result(negamax_v, v', -beta0, -old_alpha);
-
-    if i > 0
-    {
-      var u': Node :|
-        is_expansion(u', u, depth) &&
-        is_partial_negamax_ab_result(old_value, u', i, alpha0, beta0);
-
-      var u'' := replace_child(u', i, v');
-      assert is_expansion(u'', u, depth);
-
-      LoopMaintenanceLemma2(u', u'', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
-
-      if i == |u.children| - 1
-      {
-        assert is_partial_negamax_ab_result(value, u'', i + 1, alpha0, beta0);
-        PartialNegamaxAlphaBetaLemma(value, u'', i + 1, alpha0, beta0);
-        assert is_negamax_ab_result(value, u'', alpha0, beta0);
-      }
-    }
-    else
-    {
-      reveal partial_negamax();
-      var u' := replace_child(u, i, v');
-      ExpansionReplaceChildLemma(u, u', v, v', i, depth);
-      assert is_expansion(u', u, depth);
-
-      LoopMaintenanceLemma2(u, u', v, v', i, depth, alpha0, beta0, old_alpha, old_value, alpha, value, negamax_v);
-      if i == |u.children| - 1
-      {
-        assert is_partial_negamax_ab_result(value, u', i + 1, alpha0, beta0);
-        PartialNegamaxAlphaBetaLemma(value, u', i + 1, alpha0, beta0);
-        assert is_negamax_ab_result(value, u', alpha0, beta0);
-      }
     }
   }
 
