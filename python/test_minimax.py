@@ -125,28 +125,29 @@ def test_minimax_algorithms(N=10, node_count=6, bound=5):
 
         # Optionally draw the tree (uncomment for debugging)
         # draw_tree(u, f"tree_{i}")
-    
+
+
+def make_tree() -> Tuple[Node, Dict[str, Node]]:
+    d = Node(id='d', color=Color.Black, eval=3, children=[])
+    f = Node(id='f', color=Color.White, eval=2, children=[])
+    g = Node(id='g', color=Color.White, eval=1, children=[])
+    h = Node(id='h', color=Color.Black, eval=4, children=[])
+    c = Node(id='c', color=Color.White, eval=0, children=[d, h])
+    b = Node(id='b', color=Color.Black, eval=0, children=[c])
+    e = Node(id='e', color=Color.Black, eval=0, children=[f, g])
+    v = Node(id='v', color=Color.White, eval=0, children=[b, e])
+    q = Node(id='q', color=Color.White, eval=1, children=[])
+    z = Node(id='z', color=Color.White, eval=2, children=[])
+    y = Node(id='y', color=Color.Black, eval=0, children=[z, v, q])
+    m = Node(id='m', color=Color.Black, eval=0, children=[v])
+    l = Node(id='l', color=Color.White, eval=0, children=[m])
+    k = Node(id='k', color=Color.Black, eval=0, children=[l])
+    u = Node(id='u', color=Color.White, eval=0, children=[y, k])
+    node_map = {x.id: x for x in collect_nodes(u)}
+    return u, node_map
+
 
 def check_marsland_counter_example():
-
-    def make_tree() -> Tuple[Node, Dict[str, Node]]:
-        d = Node(id='d', color=Color.Black, eval=3, children=[])
-        f = Node(id='f', color=Color.White, eval=2, children=[])
-        g = Node(id='g', color=Color.White, eval=1, children=[])
-        h = Node(id='h', color=Color.Black, eval=4, children=[])
-        c = Node(id='c', color=Color.White, eval=0, children=[d, h])
-        b = Node(id='b', color=Color.Black, eval=0, children=[c])
-        e = Node(id='e', color=Color.Black, eval=0, children=[f, g])
-        v = Node(id='v', color=Color.White, eval=0, children=[b, e])
-        q = Node(id='q', color=Color.White, eval=1, children=[])
-        z = Node(id='z', color=Color.White, eval=2, children=[])
-        y = Node(id='y', color=Color.Black, eval=0, children=[z, v, q])
-        m = Node(id='m', color=Color.Black, eval=0, children=[v])
-        l = Node(id='l', color=Color.White, eval=0, children=[m])
-        k = Node(id='k', color=Color.Black, eval=0, children=[l])
-        u = Node(id='u', color=Color.White, eval=0, children=[y, k])
-        node_map = {x.id: x for x in collect_nodes(u)}
-        return u, node_map
 
     u, node_map = make_tree()
     alpha = 0
@@ -157,6 +158,14 @@ def check_marsland_counter_example():
     check_result('negamax_ttm', value, passed)
 
 
+def test_fail_soft_fail_hard_difference():
+    u, node_map = make_tree()
+    value1 = negamax_ab_knuth_1975(u, 0, 2)
+    value2 = negamax_ab_fishburn_1983(u, 0, 2)
+    assert value1 == 2
+    assert value2 == 3
+
+
 if __name__ == '__main__':
     # Check that the minimax and negamax implementations satisfy their postcondition.
     test_minimax_algorithms(N=10000, node_count=8, bound=3)
@@ -165,3 +174,5 @@ if __name__ == '__main__':
     print('--- Checking the counter example for NegamaxTTM ---')
     check_marsland_counter_example()
 
+    # Verify that negamax_ab_knuth_1975 and negamax_ab_fishburn_1983 are different
+    test_fail_soft_fail_hard_difference()
