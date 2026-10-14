@@ -23,8 +23,8 @@ Both versioned Dafny directories contain the shared definitions and lemmas, mini
 | `definitions.dfy`, `lemmas.dfy` | Shared definitions, correctness predicates, and proof lemmas. |
 | `minimax.dfy`, `minimax-alpha-beta.dfy` | Minimax and alpha-beta minimax algorithms. |
 | `negamax.dfy`, `negamax-alpha-beta.dfy` | Negamax and alpha-beta negamax algorithms. |
-| `negamax-ttp.dfy` | Transposition-table search using the corresponding correctness criterion. |
-| `negamax-ttw.dfy`, `negamax-ttw-variants.dfy` | Witness-based transposition-table search and variants. |
+| `negamax-ttp.dfy` | Depth-limited negamax search with a transposition table, based on Plaat, A., Schaeffer, J., Pijls, W., and de Bruin, A., “Best-first fixed-depth minimax algorithms,” *Artificial Intelligence* 87(1–2), 255–293 (1996). Verified using the witness-based correctness criterion. |
+| `negamax-ttw.dfy`, `negamax-ttw-variants.dfy` | Depth-limited negamax search with a transposition table, based on the algorithm described in [Wikipedia's Negamax article](https://en.wikipedia.org/wiki/Negamax). Verified using the witness-based correctness criterion. |
 | `test-definitions.dfy` | Additional definitions used for verification and testing. |
 
 ### Python implementations
