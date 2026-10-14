@@ -1,49 +1,73 @@
-# Formal Verification of Minimax Algorithms
+# Verified Minimax and Negamax Search in Dafny
 
-This repository accompanies our submission to the [Dafny Workshop at POPL 2026](https://popl26.sigplan.org/home/dafny-2026). It presents a formal verification study of game-tree search algorithms in Dafny. We introduce a **witness-based correctness criterion** for depth-limited search with transposition tables, and verify a representative family of minimax and negamax variants against this criterion. The repository also includes corresponding Python implementations to support experimentation and empirical testing. See also the extended [arXiv version](https://arxiv.org/abs/2509.20138) of our paper.
+This repository contains the research artifact for a formal verification study of game-tree search algorithms. The work was presented at the [Dafny 2026 Workshop](https://popl26.sigplan.org/home/dafny-2026) and accepted for the [VSTTE 2026 Workshop](https://fmcad.org/FMCAD26/vstte/). The VSTTE submission is available as a [PDF preprint](https://fmcad.org/FMCAD26/vstte/preprints/paper-10.pdf). An extended version is also available on [arXiv](https://arxiv.org/abs/2509.20138).
 
-## Contents
+The study develops a **witness-based correctness criterion** for depth-limited search with transposition tables and uses Dafny to verify a family of minimax and negamax algorithms against it. Corresponding Python implementations support experimentation and randomized testing.
 
-### `dafny/`
-Contains formally verified Dafny implementations of minimax and negamax algorithms, including depth-limited and transposition-table-enhanced variants. These are verified using Dafny 4.10.0.
+## Repository contents
 
-Key files and classes:
+| Path | Purpose |
+| --- | --- |
+| `dafny-4.10/` | Dafny source snapshot verified with Dafny 4.10.0. |
+| `dafny-4.11/` | Dafny source snapshot verified with Dafny 4.11.0; includes small compatibility adjustments described below. |
+| `python/` | Executable minimax and negamax implementations, game-tree utilities, and randomized tests. |
+| `logs/` | Captured verification output and per-file verification statistics for both Dafny versions. |
+| `scripts/` | Helper scripts, including the Dafny verification runner. |
 
-- `minimax.dfy`: `Minimax`
-- `minimax-alpha-beta.dfy`:  
-  - `MinimaxABKnuth1975Algorithm`  
-  - `MinimaxFishburn1983Algorithm`  
-  - `MinimaxABWiki2025Algorithm`
-- `negamax.dfy`: `NegamaxAlgorithm`
-- `negamax-alpha-beta.dfy`:  
-  - `NegamaxKnuth1975Algorithm`  
-  - `NegamaxFishburn1983Algorithm`  
-  - `NegamaxABWikipedia2025Algorithm`, `NegamaxWikipedia2025'Algorithm`
-- `negamax-depth-limited.dfy`:  
-  - `NegamaxDepthLimitedAlgorithm`  
-  - `NegamaxAlphaBetaDepthLimitedAlgorithm`  
-  - `NegamaxPVSAlgorithm`
-- `negamax-ttw.dfy`: `NegamaxTTW`
-- `negamax-ttw-current-alpha.dfy`: `NegamaxTTWCurrentAlpha`
-- `negamax-ttw-fishburn-propagation.dfy`: `NegamaxTTWFishburnPropagation`
-- `lemmas.dfy`, `definitions.dfy`: Common definitions and supporting lemmas
+### Dafny sources
 
-### `python/`
-Provides executable implementations and randomized testing for all verified algorithms. Also includes tools for tree construction, visualization, and correctness checking.
+Both versioned Dafny directories contain the shared definitions and lemmas, minimax and negamax implementations, alpha-beta variants, and transposition-table variants. The principal source files are:
 
-Key files:
+| File | Contents |
+| --- | --- |
+| `definitions.dfy`, `lemmas.dfy` | Shared definitions, correctness predicates, and proof lemmas. |
+| `minimax.dfy`, `minimax-alpha-beta.dfy` | Minimax and alpha-beta minimax algorithms. |
+| `negamax.dfy`, `negamax-alpha-beta.dfy` | Negamax and alpha-beta negamax algorithms. |
+| `negamax-ttp.dfy` | Transposition-table search using the corresponding correctness criterion. |
+| `negamax-ttw.dfy`, `negamax-ttw-variants.dfy` | Witness-based transposition-table search and variants. |
+| `test-definitions.dfy` | Additional definitions used for verification and testing. |
 
-- `definitions.py`: Core algorithm definitions and correctness predicates
-- `minimax.py`: Classic and alpha-beta minimax variants
-- `negamax.py`: Classic, alpha-beta, depth-limited, and transposition table negamax variants
-- `minimax_plaat.py`: Plaat-style transposition table version
-- `negamax-ttm-counter-example.py`: Counterexample for a Marsland-style variant that violates the witness-based criterion
-- `game_trees.py`: Utilities to construct, parse, print, and visualize game trees
-- `test_minimax.py`: Randomized testing and correctness checks
-- `logger.py`, `utilities.py`: Supporting infrastructure
+### Python implementations
 
-## Highlights
+The `python/` directory provides executable versions of the algorithms and supporting utilities. In particular, `minimax.py` and `negamax.py` contain the search variants, `definitions.py` contains common definitions and correctness predicates, `game_trees.py` provides game-tree utilities, and `test_minimax.py` exercises the implementations on randomized trees.
 
-- ✅ **Witness-based correctness**: A natural and rigorous correctness notion for transposition table search
-- ✅ **Formal verification**: Over 15 variants verified in Dafny
-- ✅ **Executable Python code**: Validated against randomized game trees
+## Verification
+
+The Dafny sources were verified with **Dafny 4.10.0** and **Dafny 4.11.0**. For 4.11, small source adjustments were needed to work around internal errors in the verification tool; the adjusted sources are kept separately in `dafny-4.11/`.
+
+### Reproducing the verification
+
+To reproduce the verification reports, install the Dafny VS Code extension with Dafny 4.10.0 and 4.11.0 available, ensure Python 3 is installed, then run these commands from the repository root:
+
+Individual files can also be verified directly with `dafny verify <file.dfy>` (using the desired Dafny version), or by opening them in VS Code with the Dafny extension and running verification there. The commands below batch the verification of all files and save the output to logs.
+
+```sh
+scripts/run-dafny.py --version "4.10" dafny-4.10/*.dfy >& logs/dafny-4.10.log
+scripts/run-dafny.py --version "4.11" dafny-4.11/*.dfy >& logs/dafny-4.11.log
+```
+
+The commands verify every `.dfy` file in the corresponding versioned directory and capture the verifier output in its log. The helper in `scripts/run-dafny.py` locates the Dafny executables supplied by the VS Code extension. Running the commands again replaces the corresponding log files.
+
+The table summarizes the reports at the ends of [`logs/dafny-4.10.log`](logs/dafny-4.10.log) and [`logs/dafny-4.11.log`](logs/dafny-4.11.log). Each listed file completed with exit code 0 in both runs. Times are the elapsed times recorded by those runs and may vary across machines.
+
+| Dafny source | 4.10.0 result | Time (s) | 4.11.0 result | Time (s) |
+| --- | ---: | ---: | ---: | ---: |
+| `definitions.dfy` | Pass | 0.87 | Pass | 0.86 |
+| `lemmas.dfy` | Pass | 1.91 | Pass | 1.50 |
+| `minimax-alpha-beta.dfy` | Pass | 3.68 | Pass | 2.41 |
+| `minimax.dfy` | Pass | 0.81 | Pass | 0.81 |
+| `negamax-alpha-beta.dfy` | Pass | 4.98 | Pass | 4.71 |
+| `negamax.dfy` | Pass | 0.86 | Pass | 0.85 |
+| `negamax-ttp.dfy` | Pass | 5.63 | Pass | 8.04 |
+| `negamax-ttw.dfy` | Pass | 2.11 | Pass | 2.93 |
+| `negamax-ttw-variants.dfy` | Pass | 2.17 | Pass | 2.27 |
+| `test-definitions.dfy` | Pass | 0.90 | Pass | 0.87 |
+| **Total files passing** | **10 / 10** |  | **10 / 10** |  |
+
+## Project status
+
+This repository is intended to serve as a stable artifact accompanying the published work. Further minimax verification work is expected to continue as a separate, larger-scale verification effort.
+
+## License
+
+The software and accompanying materials are distributed under the [Boost Software License 1.0](LICENSE).
